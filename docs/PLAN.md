@@ -83,6 +83,12 @@ Calm and warm: off-white paper / deep warm charcoal, one sage accent, clay for a
 6. TV and film tracker.
 7. Casa panel (proposal first).
 
+## Hardware
+
+- **Wall screen (confirmed):** Jaycar XC9026: 7", 1024×600, HDMI, USB 5-point capacitive touch. About 15 cm wide (~170 px per inch), so the wall layout uses larger text (clock ~112 px, body ~21 px) and targets of at least 64 px (~1 cm). The home screen fits in one view with no scrolling.
+- **Raspberry Pi model and OS:** not known yet. Needed for the kiosk setup, which may also need a `config.txt` display mode for 1024×600.
+- **Roles:** the wall screen is the main daily display. Phones and the website are the quick way to add and update things.
+
 ## Assumptions (reversible)
 
 - Household timezone is taken from the browser when the household is created (editable in Settings).

@@ -36,6 +36,7 @@ export function Home() {
         </div>
       </header>
 
+
       <nav className="app-grid" aria-label="Apps">
         {APPS.map((app) => (
           <Link key={app.id} to={app.path} state={{ dir: 'forward' }} className="app-tile">

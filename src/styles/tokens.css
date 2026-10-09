@@ -98,9 +98,16 @@
   --shadow-2: 0 4px 18px rgb(0 0 0 / 0.35);
 }
 
-/* Bigger touch targets on large touch screens (the kiosk). */
-@media (pointer: coarse) and (min-width: 900px) {
-  :root { --tap: 56px; }
+/* The wall screen: Jaycar XC9026, 7" 1024x600 (~170 px per inch, ~15 cm wide), read from across
+   the room. Everything is scaled up and every target is at least ~1 cm. */
+:root[data-device='wall'] {
+  --tap: 64px;
+  --fs-xs: 1rem;
+  --fs-sm: 1.125rem;
+  --fs-md: 1.3125rem;
+  --fs-lg: 1.625rem;
+  --fs-xl: 2rem;
+  --fs-clock: 7rem;
 }
 
 @media (prefers-reduced-motion: reduce) {

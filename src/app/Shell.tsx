@@ -1,8 +1,10 @@
+import { useEffect } from 'react';
 import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
 import { Home } from '../features/home/Home';
 import { APPS } from './apps';
 import { useConnection } from './ConnectionProvider';
+import { useHousehold } from './HouseholdProvider';
 
 /** Direction of the slide: into an app = from the right, back home = from the left. */
 export function slideDirection(pathname: string, state: unknown): 'forward' | 'back' | 'none' {
@@ -23,6 +25,15 @@ export function OfflineBanner() {
 
 export function Shell() {
   const location = useLocation();
+  const { thisDevice } = useHousehold();
+
+  // The wall screen (7" 1024x600 in the frame) gets bigger text, bigger targets and no mouse pointer.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (thisDevice?.kind === 'wall') root.dataset.device = 'wall';
+    else delete root.dataset.device;
+  }, [thisDevice?.kind]);
+
   const dir = slideDirection(location.pathname, location.state);
 
   return (
