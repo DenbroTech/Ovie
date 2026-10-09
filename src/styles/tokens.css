@@ -1,0 +1,115 @@
+/* Ovie design tokens. Every colour/size in the app comes from here. */
+:root {
+  color-scheme: light;
+  --bg: #f6f2ea;
+  --surface: #fffdf9;
+  --surface-2: #efe9df;
+  --surface-3: #e6dfd2;
+  --text: #2a2622;
+  --text-2: #6b635a;
+  --text-3: #958b7f;
+  --border: #e3dbce;
+  --accent: #5e7f64;
+  --accent-strong: #4b6a51;
+  --accent-soft: #e2ebdf;
+  --accent-ink: #ffffff;
+  --attention: #b8673f;
+  --attention-soft: #f6e3d6;
+  --danger: #b4483f;
+  --danger-soft: #f6dcd8;
+  --focus: #2f6fab;
+
+  --sheep-wool: #fffaf1;
+  --sheep-wool-edge: #e3d9c8;
+  --sheep-face: #3b332c;
+
+  /* people */
+  --member-sage: #6f8f73;
+  --member-clay: #c27a54;
+  --member-sky: #5b8db5;
+  --member-plum: #8d6a9f;
+  --member-sand: #b8995a;
+  --member-slate: #6c7680;
+
+  /* app tiles */
+  --app-tasks: #6f8f73;
+  --app-shopping: #c27a54;
+  --app-calendar: #5b8db5;
+  --app-watch: #8d6a9f;
+  --app-casa: #b8995a;
+  --app-settings: #6c7680;
+
+  --font: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --fs-xs: 0.8125rem;
+  --fs-sm: 0.9375rem;
+  --fs-md: 1.0625rem;
+  --fs-lg: 1.3125rem;
+  --fs-xl: 1.75rem;
+  --fs-2xl: 2.5rem;
+  --fs-clock: clamp(3rem, 8vw, 5.5rem);
+
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-tile: 26px;
+  --r-pill: 999px;
+
+  --shadow-1: 0 1px 2px rgb(60 45 30 / 0.06), 0 2px 8px rgb(60 45 30 / 0.05);
+  --shadow-2: 0 2px 6px rgb(60 45 30 / 0.08), 0 10px 30px rgb(60 45 30 / 0.08);
+
+  --tap: 48px;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --slide-ms: 280ms;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #1b1916;
+  --surface: #24211d;
+  --surface-2: #2e2a25;
+  --surface-3: #38332d;
+  --text: #f2ece3;
+  --text-2: #b3a99b;
+  --text-3: #8a8174;
+  --border: #3a352f;
+  --accent: #8fb396;
+  --accent-strong: #a6c6ac;
+  --accent-soft: #2c3a2e;
+  --accent-ink: #14201a;
+  --attention: #d98e66;
+  --attention-soft: #3e2c22;
+  --danger: #e07a70;
+  --danger-soft: #3f2522;
+  --focus: #7fb2e5;
+
+  --sheep-wool: #f4ede1;
+  --sheep-wool-edge: #cbbfac;
+  --sheep-face: #2a241f;
+
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3);
+  --shadow-2: 0 4px 18px rgb(0 0 0 / 0.35);
+}
+
+/* The wall screen: Jaycar XC9026, 7" 1024x600 (~170 px per inch, ~15 cm wide), read from across
+   the room. Everything is scaled up and every target is at least ~1 cm. */
+:root[data-device='wall'] {
+  --tap: 64px;
+  --fs-xs: 1rem;
+  --fs-sm: 1.125rem;
+  --fs-md: 1.3125rem;
+  --fs-lg: 1.625rem;
+  --fs-xl: 2rem;
+  --fs-clock: 7rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --slide-ms: 0ms; }
+}
