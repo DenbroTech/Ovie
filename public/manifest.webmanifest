@@ -1,0 +1,17 @@
+{
+  "name": "Ovie",
+  "short_name": "Ovie",
+  "description": "Our household hub — tasks, shopping, calendar and what we're watching.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#F6F2EA",
+  "theme_color": "#6f8f73",
+  "icons": [
+    { "src": "/ovie.svg", "sizes": "any", "type": "image/svg+xml" },
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
