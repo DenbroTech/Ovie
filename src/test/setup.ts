@@ -1,0 +1,7 @@
+import '@testing-library/jest-dom/vitest';
+import { cleanup } from '@testing-library/react';
+import { afterEach } from 'vitest';
+
+afterEach(() => cleanup());
+
+(globalThis as unknown as { __OVIE_BUILD__: string }).__OVIE_BUILD__ = 'test';

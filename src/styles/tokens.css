@@ -1,0 +1,139 @@
+/* Ovie design tokens. Components use only these variables. */
+:root {
+  /* Type */
+  --font-ui: 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-display: 'Fraunces Variable', Georgia, 'Times New Roman', serif;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-md: 1.0625rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.625rem;
+  --text-2xl: 2.25rem;
+  --text-clock: clamp(3rem, 6vw + 1rem, 5.5rem);
+  --leading: 1.45;
+
+  /* Space (4px grid) */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+
+  /* Shape and depth */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-pill: 999px;
+  --shadow-1: 0 1px 2px rgb(40 30 20 / 0.06), 0 1px 1px rgb(40 30 20 / 0.04);
+  --shadow-2: 0 6px 24px rgb(40 30 20 / 0.10), 0 2px 6px rgb(40 30 20 / 0.06);
+
+  /* Touch */
+  --touch-min: 48px;
+  --touch-comfy: 56px;
+
+  /* Motion */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur-fast: 120ms;
+  --dur: 200ms;
+
+  /* Layout */
+  --rail-width: 96px;
+  --tabbar-height: 64px;
+  --content-max: 1440px;
+
+  /* Colour: light */
+  color-scheme: light;
+  --bg: #F6F3EE;
+  --surface: #FFFFFF;
+  --surface-2: #EFEAE2;
+  --surface-3: #E6DFD4;
+  --border: #E2DCD2;
+  --border-strong: #CFC6B8;
+  --text: #23201C;
+  --text-muted: #6B645B;
+  --text-faint: #8C8478;
+  --accent: #4F7A5F;
+  --accent-hover: #44694F;
+  --accent-soft: #DCE8DF;
+  --on-accent: #FFFFFF;
+  --danger: #B4493C;
+  --danger-soft: #F6E1DD;
+  --warning: #93600F;
+  --warning-soft: #F5E7CC;
+  --success: #3F7A4E;
+  --focus: #2F6B8A;
+
+  /* Member colours (fg on soft bg both pass 4.5:1) */
+  --m-sage: #3E6B4E;   --m-sage-soft: #DCE8DF;
+  --m-clay: #9C4A32;   --m-clay-soft: #F4DED5;
+  --m-sky: #2D6283;    --m-sky-soft: #D8E8F2;
+  --m-plum: #7A4470;   --m-plum-soft: #EEDCEA;
+  --m-ochre: #855A0E;  --m-ochre-soft: #F3E5C8;
+  --m-slate: #4A5563;  --m-slate-soft: #E1E5EA;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #161513;
+    --surface: #1F1D1A;
+    --surface-2: #292622;
+    --surface-3: #34302B;
+    --border: #34302B;
+    --border-strong: #4A453E;
+    --text: #F1ECE4;
+    --text-muted: #B0A89C;
+    --text-faint: #8F877B;
+    --accent: #8DB89A;
+    --accent-hover: #A2C8AD;
+    --accent-soft: #263A2D;
+    --on-accent: #10180F;
+    --danger: #E58A7C;
+    --danger-soft: #3D2320;
+    --warning: #E2B467;
+    --warning-soft: #3A2E18;
+    --success: #8DB89A;
+    --focus: #7FB6D6;
+    --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+    --shadow-2: 0 8px 28px rgb(0 0 0 / 0.45);
+    --m-sage: #9CC6A8;  --m-sage-soft: #24372A;
+    --m-clay: #E9A58F;  --m-clay-soft: #42261E;
+    --m-sky: #93C3E2;   --m-sky-soft: #1E3342;
+    --m-plum: #D9A6CF;  --m-plum-soft: #3A2336;
+    --m-ochre: #E6BE70; --m-ochre-soft: #3B2F17;
+    --m-slate: #B5C0CD; --m-slate-soft: #2A3038;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #161513;
+  --surface: #1F1D1A;
+  --surface-2: #292622;
+  --surface-3: #34302B;
+  --border: #34302B;
+  --border-strong: #4A453E;
+  --text: #F1ECE4;
+  --text-muted: #B0A89C;
+  --text-faint: #8F877B;
+  --accent: #8DB89A;
+  --accent-hover: #A2C8AD;
+  --accent-soft: #263A2D;
+  --on-accent: #10180F;
+  --danger: #E58A7C;
+  --danger-soft: #3D2320;
+  --warning: #E2B467;
+  --warning-soft: #3A2E18;
+  --success: #8DB89A;
+  --focus: #7FB6D6;
+  --shadow-1: 0 1px 2px rgb(0 0 0 / 0.4);
+  --shadow-2: 0 8px 28px rgb(0 0 0 / 0.45);
+  --m-sage: #9CC6A8;  --m-sage-soft: #24372A;
+  --m-clay: #E9A58F;  --m-clay-soft: #42261E;
+  --m-sky: #93C3E2;   --m-sky-soft: #1E3342;
+  --m-plum: #D9A6CF;  --m-plum-soft: #3A2336;
+  --m-ochre: #E6BE70; --m-ochre-soft: #3B2F17;
+  --m-slate: #B5C0CD; --m-slate-soft: #2A3038;
+}
