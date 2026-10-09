@@ -19,6 +19,8 @@ function versionFile(): Plugin {
 }
 
 export default defineConfig({
+  // GitHub Pages serves Ovie from /Ovie/ (set by the deploy workflow); locally it is /.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [react(), versionFile()],
   define: {
     __BUILD_ID__: JSON.stringify(BUILD_ID),

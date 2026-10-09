@@ -4,7 +4,7 @@ const CHECK_EVERY_MS = 5 * 60 * 1000;
 
 async function latestBuild(): Promise<string | null> {
   try {
-    const res = await fetch(`/version.json?t=${Date.now()}`, { cache: 'no-store' });
+    const res = await fetch(`${import.meta.env.BASE_URL}version.json?t=${Date.now()}`, { cache: 'no-store' });
     if (!res.ok) return null;
     const data = (await res.json()) as { build?: string };
     return data.build ?? null;
@@ -26,7 +26,7 @@ export function startUpdateChecks() {
   if (import.meta.env.DEV) return;
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`, { scope: import.meta.env.BASE_URL }).catch(() => {
       /* app still works without it */
     });
   }

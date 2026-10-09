@@ -6,7 +6,7 @@ Short and practical. `docs/KICKOFF.md` wins over `docs/BRIEF.md`; this file reco
 
 ```
  Pi kiosk (Chromium, full screen) ─┐
- Phones / laptops (any network)  ──┼──▶  Cloudflare Pages (static React PWA)
+ Phones / laptops (any network)  ──┼──▶  GitHub Pages (static React PWA)
                                    │            │  supabase-js (publishable key + user JWT)
                                    │            ▼
                                    └──▶  Supabase project ₲ryd (vbncwfkkeqfgkiwcoiql)
@@ -30,7 +30,7 @@ src/                React + TypeScript app
   features/<name>/  one folder per module (settings, dashboard, tasks…)
   lib/              supabase client, helpers (dates, recurrence…)
   styles/           design tokens + base styles
-public/             manifest, icons, service worker, Cloudflare _headers/_redirects
+public/             manifest, icons, service worker
 supabase/migrations ovie_* SQL (identical to what is applied through the migration tool)
 supabase/tests      SQL tests (run in a rolled-back transaction)
 scripts/            backup / restore of the ovie schema (Windows .cmd)
@@ -86,10 +86,12 @@ Calm and warm: off-white paper / deep warm charcoal, one sage accent, clay for a
 ## Hardware
 
 - **Wall screen (confirmed):** Jaycar XC9026: 7", 1024×600, HDMI, USB 5-point capacitive touch. About 15 cm wide (~170 px per inch), so the wall layout uses larger text (clock ~112 px, body ~21 px) and targets of at least 64 px (~1 cm). The home screen fits in one view with no scrolling.
-- **Raspberry Pi:** Pi 4 Model B (confirmed). Plan: a fresh SD card with Raspberry Pi OS 64-bit (desktop), hostname `ovie`, SSH on. The old card (cat game) is kept untouched. Screen HDMI → micro-HDMI port 0, touch via USB. If the screen does not come up at 1024×600, add `video=HDMI-A-1:1024x600@60` to `cmdline.txt`. Kiosk autostart is written once Ovie has its Cloudflare Pages address.
+- **Raspberry Pi:** Pi 4 Model B (confirmed). May share the existing SD card with the cat game (check OS age and Chromium version first; back up the card before changes). Screen HDMI → micro-HDMI port 0, touch via USB. If the screen does not come up at 1024×600, add `video=HDMI-A-1:1024x600@60` to `cmdline.txt`. Kiosk: Chromium full screen on https://denbrotech.github.io/Ovie/ at boot (written when Pi work starts).
 - **Roles:** the wall screen is the main daily display. Phones and the website are the quick way to add and update things.
 
 ## Assumptions (reversible)
+
+- **Hosting: GitHub Pages instead of Cloudflare Pages (decided 2026-10-09).** Free, already used for denbrotech.github.io, deploys from `main` via `.github/workflows/deploy.yml`. Requires the repo to stay public.
 
 - Household timezone is taken from the browser when the household is created (editable in Settings).
 - **No logins (decided 2026-10-09, replaces KICKOFF's "email + password").** Every device signs in anonymously and is paired once with the home code. RLS still requires a paired device on every table, so the public web address and publishable key alone give access to nothing. On the wall screen, actions are attributed by tapping who did them.

@@ -56,7 +56,7 @@ export default function App() {
   }
   return (
     <ThemeContext.Provider value={{ theme, setTheme }}>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '') || '/'}>
         <ConnectionProvider>
           <ToastProvider>
             <AuthProvider>

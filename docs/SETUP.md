@@ -35,19 +35,18 @@ On each phone or screen: open Ovie → type the **home code** → tap who the de
 - Lost a phone? Settings → **Devices** → remove it. If you think the code leaked, Settings → **Home code** → make a new one (devices already set up keep working).
 - Clearing a browser's data forgets that device. Just type the code again, and remove the old entry from Settings → Devices.
 
-## 4. Cloudflare Pages (when you want it online)
+## 4. Put Ovie online (GitHub Pages)
 
-1. https://dash.cloudflare.com → **Workers & Pages** → **Create** → **Pages** → **Connect to Git** → pick **DenbroTech/Ovie**.
-2. Build settings:
-   - Framework preset: **None** (or Vite)
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-3. **Environment variables** (Production and Preview):
-   - `VITE_SUPABASE_URL` = `https://vbncwfkkeqfgkiwcoiql.supabase.co`
-   - `VITE_SUPABASE_PUBLISHABLE_KEY` = your `sb_publishable_…` key
-   - `NODE_VERSION` = `22`
-4. **Save and Deploy.** Then open the `…pages.dev` address on each device and add it with the home code.
-5. Every push to `main` redeploys, and open screens reload to the new version within about 5 minutes (or straight away when the screen wakes or comes back online).
+Ovie's address will be **https://denbrotech.github.io/Ovie/**. It talks straight to Supabase; GitHub only stores the app's files.
+
+1. Open https://github.com/DenbroTech/Ovie → **Settings** → **Pages** (left side).
+   Under **Build and deployment** → **Source**, choose **GitHub Actions**.
+2. Still in Settings → **Secrets and variables** → **Actions** → the **Variables** tab → **New repository variable**. Add two:
+   - Name `VITE_SUPABASE_URL`, value `https://vbncwfkkeqfgkiwcoiql.supabase.co`
+   - Name `VITE_SUPABASE_PUBLISHABLE_KEY`, value your `sb_publishable_…` key (Supabase → Project Settings → API Keys)
+3. Every change merged into `main` now publishes itself (repo → **Actions** tab shows progress, about 2 minutes). Open screens reload to the new version within about 5 minutes.
+
+The repo must stay **public** for free GitHub Pages. Nothing secret is in it: the publishable key only allows what the database rules allow.
 
 ## 5. Raspberry Pi kiosk
 

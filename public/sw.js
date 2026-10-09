@@ -1,8 +1,10 @@
 // Ovie service worker.
 // - Pages: network first, so a new deploy is used straight away. The cached copy is
 //   only used when the network is down, and the app then shows "Offline – reconnecting".
-// - /assets/* (hashed file names, never change): cache first.
+// - assets/* (hashed file names, never change): cache first.
 // - Everything else (Supabase API, fonts, version.json): straight to the network.
+// Works at / (local) and /Ovie/ (GitHub Pages): everything is relative to where the worker lives.
+const BASE = new URL(self.registration.scope).pathname;
 const SHELL = 'ovie-shell-v1';
 const ASSETS = 'ovie-assets-v1';
 
@@ -32,10 +34,10 @@ self.addEventListener('fetch', (event) => {
         try {
           const fresh = await fetch(req, { cache: 'no-store' });
           const cache = await caches.open(SHELL);
-          cache.put('/', fresh.clone());
+          cache.put(BASE, fresh.clone());
           return fresh;
         } catch {
-          const cached = await caches.match('/');
+          const cached = await caches.match(BASE);
           return cached ?? Response.error();
         }
       })(),
@@ -43,7 +45,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  if (url.pathname.startsWith('/assets/')) {
+  if (url.pathname.startsWith(BASE + 'assets/')) {
     event.respondWith(
       (async () => {
         const cache = await caches.open(ASSETS);

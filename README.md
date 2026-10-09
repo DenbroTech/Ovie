@@ -5,13 +5,13 @@ A household hub (tasks, shopping, calendar, TV tracking and more) for a framed R
 - Product brief: [docs/BRIEF.md](docs/BRIEF.md)
 - Agreed architecture decisions: [docs/KICKOFF.md](docs/KICKOFF.md) — these win where the two disagree.
 - Plan (schema, navigation, design): [docs/PLAN.md](docs/PLAN.md)
-- Setup steps (Supabase, PC, Cloudflare Pages): [docs/SETUP.md](docs/SETUP.md)
+- Setup steps (Supabase, PC, GitHub Pages): [docs/SETUP.md](docs/SETUP.md)
 - Backups: [docs/BACKUPS.md](docs/BACKUPS.md)
 - Progress and what's left: [docs/STATUS.md](docs/STATUS.md)
 
 ## How it fits together
 
-- **App:** React + TypeScript + Vite, a static PWA hosted on Cloudflare Pages.
+- **App:** React + TypeScript + Vite, a static PWA hosted on GitHub Pages (https://denbrotech.github.io/Ovie/).
 - **Data:** the existing ₲ryd Supabase project, in its own `ovie` schema.
 - **No logins.** Each device is linked once with the home code. Every table has row-level security, so only linked devices can see or change anything. You can still edit data directly in the Supabase dashboard.
 - **Wall screen:** the Raspberry Pi runs Chromium full screen on the same web address. Phones use the same address.
@@ -50,7 +50,7 @@ Database tests live in `supabase/tests/`. `supabase/tests/local/run.sh` runs eve
 
 ```
 src/                 the app (app/ shell, components/, features/<module>/, lib/, styles/)
-public/              icons, manifest, service worker, Cloudflare _headers/_redirects
+public/              icons, manifest, service worker
 supabase/migrations  every database change, exactly as applied (all named ovie_*)
 supabase/tests       SQL tests (always rolled back)
 scripts/             backup-ovie.cmd / restore-ovie.cmd (ovie schema only)
