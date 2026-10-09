@@ -18,7 +18,7 @@ export function Home() {
   const { household, me } = useHousehold();
   const now = useNow();
   const tz = household?.timezone;
-  const name = me && me.role !== 'device' ? `, ${me.display_name}` : '';
+  const name = me ? `, ${me.display_name}` : '';
 
   return (
     <div className="home">

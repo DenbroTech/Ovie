@@ -1,17 +1,21 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
 import { friendlyError } from '../lib/errors';
-import type { Household, Member } from '../lib/types';
+import type { Device, Household, Member } from '../lib/types';
 import { useAuth } from './AuthProvider';
 import { useConnection } from './ConnectionProvider';
 
-type Status = 'loading' | 'none' | 'ready' | 'error';
+/** loading → (setup | join) → ready.  setup = very first device; join = household exists, pair with code. */
+type Status = 'loading' | 'setup' | 'join' | 'ready' | 'error';
 
 interface HouseholdState {
   status: Status;
   error: string | null;
   household: Household | null;
   members: Member[];
+  devices: Device[];
+  thisDevice: Device | null;
+  /** The person this device belongs to (null for the shared wall screen). */
   me: Member | null;
   refresh: () => Promise<void>;
 }
@@ -26,40 +30,38 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [household, setHousehold] = useState<Household | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
 
   const load = useCallback(async () => {
     if (!userId) return;
     setError(null);
-    const mine = await supabase
-      .from('members')
-      .select('household_id')
-      .eq('user_id', userId)
-      .limit(1)
-      .maybeSingle();
-    if (mine.error) {
-      setError(friendlyError(mine.error));
+    const state = await supabase.rpc('setup_state');
+    if (state.error) {
+      setError(friendlyError(state.error));
       setStatus('error');
       return;
     }
-    if (!mine.data) {
+    if (state.data !== 'paired') {
       setHousehold(null);
       setMembers([]);
-      setStatus('none');
+      setDevices([]);
+      setStatus(state.data === 'setup' ? 'setup' : 'join');
       return;
     }
-    const hid = mine.data.household_id as string;
-    const [h, m] = await Promise.all([
-      supabase.from('households').select('id,name,timezone,invite_code,settings').eq('id', hid).single(),
-      supabase.from('members').select('id,household_id,user_id,display_name,role,colour,prefs')
-        .eq('household_id', hid).order('created_at'),
+    const [h, m, d] = await Promise.all([
+      supabase.from('households').select('id,name,timezone,invite_code,settings').single(),
+      supabase.from('members').select('id,household_id,display_name,colour').order('created_at'),
+      supabase.from('devices').select('id,household_id,user_id,member_id,kind,label,last_seen_at').order('created_at'),
     ]);
-    if (h.error || m.error) {
-      setError(friendlyError(h.error ?? m.error));
+    const err = h.error ?? m.error ?? d.error;
+    if (err) {
+      setError(friendlyError(err));
       setStatus('error');
       return;
     }
     setHousehold(h.data as Household);
     setMembers(m.data as Member[]);
+    setDevices(d.data as Device[]);
     setStatus('ready');
   }, [userId]);
 
@@ -68,28 +70,38 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
     void load();
   }, [load]);
 
-  // Live updates: names, colours, invite code changed on another device.
   const hid = household?.id;
   useEffect(() => {
     if (!hid) return;
+    void supabase.rpc('touch_device');
     const channel = supabase
       .channel(`household:${hid}`)
       .on('postgres_changes', { event: '*', schema: 'ovie', table: 'members', filter: `household_id=eq.${hid}` }, () => void load())
+      .on('postgres_changes', { event: '*', schema: 'ovie', table: 'devices', filter: `household_id=eq.${hid}` }, () => void load())
       .on('postgres_changes', { event: '*', schema: 'ovie', table: 'households', filter: `id=eq.${hid}` }, () => void load())
       .subscribe((s) => {
         reportRealtime(s);
-        if (s === 'SUBSCRIBED') void load(); // catch anything missed while disconnected
+        if (s === 'SUBSCRIBED') void load(); // catch up on anything missed while disconnected
       });
     return () => {
       void supabase.removeChannel(channel);
     };
   }, [hid, load, reportRealtime]);
 
-  const me = useMemo(() => members.find((m) => m.user_id === userId) ?? null, [members, userId]);
+  const thisDevice = useMemo(() => devices.find((d) => d.user_id === userId) ?? null, [devices, userId]);
+  const me = useMemo(
+    () => (thisDevice?.member_id ? members.find((m) => m.id === thisDevice.member_id) ?? null : null),
+    [thisDevice, members],
+  );
+
+  // If this device was unpaired from another device, drop back to the pairing screen.
+  useEffect(() => {
+    if (status === 'ready' && devices.length > 0 && !thisDevice) void load();
+  }, [status, devices, thisDevice, load]);
 
   const value = useMemo<HouseholdState>(
-    () => ({ status, error, household, members, me, refresh: load }),
-    [status, error, household, members, me, load],
+    () => ({ status, error, household, members, devices, thisDevice, me, refresh: load }),
+    [status, error, household, members, devices, thisDevice, me, load],
   );
   return <HouseholdContext.Provider value={value}>{children}</HouseholdContext.Provider>;
 }

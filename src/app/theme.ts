@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import type { ThemePref } from '../lib/types';
 
 const KEY = 'ovie-theme';
@@ -39,3 +39,10 @@ export function useTheme(pref: ThemePref) {
     return () => mq.removeEventListener('change', onChange);
   }, [pref]);
 }
+
+/** Theme is a per-device choice (the wall screen may want dark while phones follow the system). */
+export const ThemeContext = createContext<{ theme: ThemePref; setTheme: (t: ThemePref) => void }>({
+  theme: 'system',
+  setTheme: () => {},
+});
+export const useThemeChoice = () => useContext(ThemeContext);

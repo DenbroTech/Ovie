@@ -1,9 +1,11 @@
 -- A tiny stand-in for the parts of Supabase that Ovie's migrations rely on,
 -- so migrations, SQL tests and backup/restore can be exercised on a throwaway local Postgres.
 -- NEVER run this against the real project.
-create role anon nologin;
-create role authenticated nologin;
-create role service_role nologin bypassrls;
+do $$ begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
+end $$;
 
 create schema extensions;
 create extension pgcrypto schema extensions;

@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 
 vi.mock('../../lib/supabase', () => ({ supabase: {}, configError: null }));
-let me = { id: 'm', display_name: 'Andrew', role: 'owner', colour: 'sage', prefs: {} };
+let me: unknown = { id: 'm', household_id: 'h', display_name: 'Andrew', colour: 'sage' };
 vi.mock('../../app/HouseholdProvider', () => ({
   useHousehold: () => ({
     household: { id: 'h', name: 'Our home', timezone: 'Australia/Sydney', invite_code: 'X', settings: {} },
@@ -22,9 +22,9 @@ describe('Home', () => {
     expect(screen.getByRole('img', { name: /ovie the sheep/i })).toBeInTheDocument();
   });
 
-  it('does not greet the wall screen by name', () => {
-    me = { ...me, display_name: 'Kiosk', role: 'device' };
+  it('greets the shared wall screen without a name', () => {
+    me = null;
     render(<MemoryRouter><Home /></MemoryRouter>);
-    expect(screen.queryByText(/Kiosk!/)).not.toBeInTheDocument();
+    expect(screen.getByText(/^Good (morning|afternoon|evening|night)!$/)).toBeInTheDocument();
   });
 });

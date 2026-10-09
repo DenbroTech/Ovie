@@ -104,3 +104,17 @@
   .app-icon { width: 72px; height: 72px; border-radius: 22px; }
   .app-grid { grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); }
 }
+
+/* ---------- pairing ---------- */
+.code-input { font-size: var(--fs-lg) !important; letter-spacing: 0.12em; text-transform: uppercase; text-align: center; }
+.person-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); gap: var(--s-3); }
+.person-tile {
+  display: grid; justify-items: center; gap: var(--s-2); padding: var(--s-4) var(--s-2);
+  min-height: 120px; border-radius: var(--r-lg); border: 1.5px solid var(--border);
+  background: var(--surface); font-weight: 700; cursor: pointer;
+  transition: transform 120ms var(--ease), border-color 150ms;
+}
+.person-tile:active:not(:disabled) { transform: scale(0.96); }
+.person-tile:hover:not(:disabled) { border-color: var(--accent); }
+.person-tile:disabled { opacity: 0.5; }
+.person-tile-icon { width: 64px; height: 64px; background: var(--surface-2); color: var(--text-2); }

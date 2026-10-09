@@ -12,7 +12,8 @@ A household hub (tasks, shopping, calendar, TV tracking and more) for a framed R
 ## How it fits together
 
 - **App:** React + TypeScript + Vite, a static PWA hosted on Cloudflare Pages.
-- **Data:** the existing ₲ryd Supabase project, in its own `ovie` schema. Every table has row-level security, so only signed-in household members can see or change anything.
+- **Data:** the existing ₲ryd Supabase project, in its own `ovie` schema.
+- **No logins.** Each device is linked once with the home code. Every table has row-level security, so only linked devices can see or change anything. You can still edit data directly in the Supabase dashboard.
 - **Wall screen:** the Raspberry Pi runs Chromium full screen on the same web address. Phones use the same address.
 - **Internet is required.** When it drops, Ovie shows "Offline — reconnecting" and pauses changes.
 

@@ -13,7 +13,7 @@ Short and practical. `docs/KICKOFF.md` wins over `docs/BRIEF.md`; this file reco
                                           ├─ schema ovie      ← everything Ovie owns (RLS on every table)
                                           ├─ schema public    ← ₲ryd, READ ONLY via ovie.casa_* definer functions
                                           ├─ schema periodical← another app, never touched
-                                          ├─ Auth             ← email + password logins
+                                          ├─ Auth             ← anonymous device sessions (no logins)
                                           └─ Realtime         ← live sync between devices
 ```
 
@@ -43,7 +43,7 @@ All tables in `ovie`, all with `household_id`, RLS on, policies for the `authent
 
 | Area | Tables | Notes |
 |---|---|---|
-| Foundation | `households`, `members` | `members.role`: `owner`, `adult`, `device` (the kiosk). Members are the people things are assigned to; adding a third person needs no schema change. |
+| Foundation | `households`, `members`, `devices` | `members` = people (who tasks are assigned to). `devices` = paired phones/PCs/wall screen, each an anonymous Supabase user, linked to a person or shared. Only one household can exist (closed system). |
 | Tasks | `task_lists`, `tasks` | `assignee` = member id, `shared` flag, priority, due/start dates, recurrence (`rrule`-lite: every N days/weeks/months), `completed_at` + `completed_by`. Completing a recurring task inserts the next occurrence through `ovie.complete_task()`, guarded by a unique `(series_id, due_on)` index so retries never duplicate. |
 | Shopping | `shopping_lists`, `shopping_items` | Tap to tick (`checked_at`, `checked_by`), clear completed = archive, frequent/recent items come from history. |
 | Calendar | `events`, `event_exceptions` | Events stored with timezone; recurring series expanded in the client; editing "this occurrence" writes an exception row, never touches the series. |
@@ -55,7 +55,7 @@ Later modules (notes, meals, maintenance, inventory, bills, plans) follow the sa
 ## API boundaries
 
 - **Plain table access through RLS** for simple create/edit/delete (`is_member(household_id)` on every policy).
-- **RPCs** for anything that spans rows or needs rules: `create_household`, `join_household`, `complete_task`, `uncomplete_task`, `mark_episodes`, `casa_summary`…
+- **RPCs** for anything that spans rows or needs rules: `setup_household`, `pair_device`, `people_for_code`, `complete_task`, `uncomplete_task`, `mark_episodes`, `casa_summary`…
 - Every function is `security definer` only where it must be, with `set search_path = ''` and an explicit membership check.
 - The frontend never queries `public.*`.
 
@@ -86,6 +86,5 @@ Calm and warm: off-white paper / deep warm charcoal, one sage accent, clay for a
 ## Assumptions (reversible)
 
 - Household timezone is taken from the browser when the household is created (editable in Settings).
-- One household per login for now; the schema allows more.
-- The kiosk uses its own login (e.g. `kiosk@…`) that joins as role `device`, so it never shows a password prompt once set up and changes are attributed honestly ("done by Andrew via kiosk" is chosen with a tap).
-- Supabase Auth's email confirmation setting is whatever the project already has; sign-up handles both cases.
+- **No logins (decided 2026-10-09, replaces KICKOFF's "email + password").** Every device signs in anonymously and is paired once with the home code. RLS still requires a paired device on every table, so the public web address and publishable key alone give access to nothing. On the wall screen, actions are attributed by tapping who did them.
+- Exactly one household (closed system): `setup_household` only works on the very first run.

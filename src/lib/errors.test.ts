@@ -8,9 +8,9 @@ describe('friendlyError', () => {
     expect(friendlyError({ code: 'PGRST106', message: 'The schema must be one of the following: public' }))
       .toMatch(/Exposed schemas/);
   });
-  it('explains wrong passwords and invite codes', () => {
-    expect(friendlyError({ message: 'Invalid login credentials' })).toMatch(/do not match/);
-    expect(friendlyError({ message: 'invite code not recognised', code: 'P0002' })).toMatch(/invite code/);
+  it('explains a wrong code and switched-off anonymous sign-ins', () => {
+    expect(friendlyError({ message: 'invite code not recognised', code: 'P0002' })).toMatch(/code is not right/);
+    expect(friendlyError({ message: 'Anonymous sign-ins are disabled' })).toMatch(/Allow anonymous sign-ins/);
   });
   it('maps permission errors', () => {
     expect(friendlyError({ code: '42501', message: 'only an owner can change roles' })).toMatch(/permission/);

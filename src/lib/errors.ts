@@ -17,12 +17,12 @@ export function friendlyError(err: unknown): string {
   if (e.code === 'PGRST106' || lower.includes('invalid schema') || lower.includes('schema must be one of')) {
     return 'The database is not ready yet: the "ovie" schema still needs to be exposed in Supabase (Settings → Data API → Exposed schemas).';
   }
-  if (lower.includes('invalid login credentials')) return 'That email and password do not match.';
-  if (lower.includes('email not confirmed')) return 'Please confirm your email first — check your inbox for the link.';
-  if (lower.includes('user already registered')) return 'There is already an account with that email. Try signing in.';
-  if (lower.includes('password should be at least')) return msg;
-  if (lower.includes('invite code not recognised')) return 'That invite code is not right. Check it and try again.';
-  if (lower.includes('already belongs to a household')) return 'This login is already part of a household.';
+  if (lower.includes('anonymous sign-ins are disabled') || lower.includes('anonymous_provider_disabled')) {
+    return 'Ovie cannot start yet: "Allow anonymous sign-ins" is switched off in Supabase (Authentication → Sign In / Providers).';
+  }
+  if (lower.includes('invite code not recognised')) return 'That code is not right. Check it on a device that is already set up (Settings).';
+  if (lower.includes('already paired')) return 'This device is already set up.';
+  if (lower.includes('already set up')) return 'Ovie is already set up. Use the household code to add this device.';
   if (e.code === '42501' || lower.includes('permission denied') || lower.includes('row-level security')) {
     return "You don't have permission to do that.";
   }
