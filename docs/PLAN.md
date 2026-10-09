@@ -86,7 +86,7 @@ Calm and warm: off-white paper / deep warm charcoal, one sage accent, clay for a
 ## Hardware
 
 - **Wall screen (confirmed):** Jaycar XC9026: 7", 1024×600, HDMI, USB 5-point capacitive touch. About 15 cm wide (~170 px per inch), so the wall layout uses larger text (clock ~112 px, body ~21 px) and targets of at least 64 px (~1 cm). The home screen fits in one view with no scrolling.
-- **Raspberry Pi model and OS:** not known yet. Needed for the kiosk setup, which may also need a `config.txt` display mode for 1024×600.
+- **Raspberry Pi:** Pi 4 Model B (confirmed). Plan: a fresh SD card with Raspberry Pi OS 64-bit (desktop), hostname `ovie`, SSH on. The old card (cat game) is kept untouched. Screen HDMI → micro-HDMI port 0, touch via USB. If the screen does not come up at 1024×600, add `video=HDMI-A-1:1024x600@60` to `cmdline.txt`. Kiosk autostart is written once Ovie has its Cloudflare Pages address.
 - **Roles:** the wall screen is the main daily display. Phones and the website are the quick way to add and update things.
 
 ## Assumptions (reversible)
