@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { CalendarDays, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { CalendarDays, Check, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
 import { OvieSheep } from '../../components/OvieSheep';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { supabase } from '../../lib/supabase';
@@ -131,17 +131,17 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
 
   const name = (id: string | null) => members.find((m) => m.id === id)?.display_name;
   const week = expandEvents(events.data ?? [], today, weekEnd);
-  const watching = (titles.data ?? []).filter((t) => t.status === 'watching').map((t) => {
-    const next = t.kind === 'show' ? nextEpisode(t.seasons, (views.data ?? []).filter((v) => v.title_id === t.id)) : null;
-    return { id: t.id, name: t.name, next: next ? `S${next.season} E${next.episode}` : t.kind === 'film' ? 'Film' : 'All caught up' };
-  });
+  const nextFor = (t: TitleLite) => nextEpisode(t.seasons, (views.data ?? []).filter((v) => v.title_id === t.id));
   const wantList = (titles.data ?? []).filter((t) => t.status === 'want');
   // Rent dwarfs everything else (and never changes), so the wall leaves it out.
   const glance = trend && trend.length ? moneyGlance(trend, ['RENT']) : null;
   const hasMoney = !!glance && (glance.spent > 0 || !!glance.usual);
   const status = glance ? moneyStatus(glance.spent, glance.usual, monthFraction(today)) : null;
   const counts = countdowns(events.data ?? [], today);
-  const pick = watching[0] ?? (wantList[0] ? { id: wantList[0].id, name: wantList[0].name, next: wantList[0].kind === 'film' ? 'Film' : 'New show' } : null);
+  // Tonight's pick: something on the go with an episode left (or a film), else the top of the watchlist.
+  const pickTitle = (titles.data ?? []).find((t) => t.status === 'watching' && (t.kind === 'film' || nextFor(t))) ?? wantList[0] ?? null;
+  const pickNext = pickTitle ? (pickTitle.kind === 'film' ? { season: 0, episode: 0 } : nextFor(pickTitle)) : null;
+  const pick = pickTitle && pickNext ? { title: pickTitle, next: pickNext, label: pickTitle.kind === 'film' ? 'Film' : `S${pickNext.season} E${pickNext.episode}` } : null;
 
   const todayOcc = week.filter((o) => o.day === today);
   const laterOcc = week.filter((o) => o.day !== today);
@@ -156,11 +156,47 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     money: hasMoney,
     watch: !!pick,
   });
+  // After a Done tap, stay on this topic a little longer so you can tick off a few.
+  const lastTap = useRef(0);
   useEffect(() => {
-    const id = window.setInterval(() => setSlideIdx((i) => i + 1), SLIDE_SECONDS * 1000);
+    const id = window.setInterval(() => { if (Date.now() - lastTap.current > 20_000) setSlideIdx((i) => i + 1); }, SLIDE_SECONDS * 1000);
     return () => window.clearInterval(id);
   }, []);
   const slide = slides[slideIdx % slides.length];
+
+  // Done buttons right on the screensaver (they don't wake it up).
+  const [doneIds, setDoneIds] = useState<string[]>([]);
+  const [failed, setFailed] = useState(false);
+  const tapped = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    lastTap.current = Date.now();
+    setFailed(false);
+    setDoneIds((d) => [...d, id]);
+  };
+  const settle = (ok: boolean, id: string, reload: () => void) => {
+    if (!ok) { setFailed(true); setDoneIds((d) => d.filter((x) => x !== id)); return; }
+    window.setTimeout(() => { reload(); setDoneIds((d) => d.filter((x) => x !== id)); }, 1500);
+  };
+  async function finishJob(e: React.MouseEvent, t: TaskLite) {
+    if (doneIds.includes(t.id)) { e.stopPropagation(); return; }
+    tapped(e, t.id);
+    const { error } = await supabase.rpc('complete_task', { p_task_id: t.id, p_by: null });
+    settle(!error, t.id, () => void tasks.reload());
+  }
+  async function watchedIt(e: React.MouseEvent) {
+    if (!pick || !hid || doneIds.includes(pick.title.id)) { e.stopPropagation(); return; }
+    const { title: t, next } = pick;
+    tapped(e, t.id);
+    const { error } = await supabase.from('viewings').upsert(
+      { household_id: hid, title_id: t.id, member_id: null, season: next.season, episode: next.episode },
+      { onConflict: 'title_id,member_id,season,episode', ignoreDuplicates: true });
+    if (!error) {
+      const finished = t.kind === 'film' || nextEpisode(t.seasons, [...(views.data ?? []).filter((v) => v.title_id === t.id), next]) === null;
+      if (finished) await supabase.from('titles').update({ status: 'done' }).eq('id', t.id);
+      else if (t.status !== 'watching') await supabase.from('titles').update({ status: 'watching' }).eq('id', t.id);
+    }
+    settle(!error, t.id, () => { void views.reload(); void titles.reload(); });
+  }
   const current = pics.length ? pics[photoIdx % pics.length] : null;
   const shortDay = (day: string) => daysBetween(today, day) === 1 ? 'Tomorrow' : parseIso(day).toLocaleDateString(undefined, { weekday: 'short' });
   const fmtTime = (d: Date) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: tz }).format(d);
@@ -202,11 +238,20 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
           {slide === 'jobs' && (
             <>
               <h3><SquareCheckBig size={24} /> Jobs to do{jobsNow.length > 3 ? ` · ${jobsNow.length}` : ''}</h3>
-              {jobsNow.slice(0, 3).map((t) => (
-                <p key={t.id} className={`ss-item${t.due_on && t.due_on < today ? ' ss-late' : ''}`}>
-                  {t.title}{name(t.assignee_id) ? <span className="ss-who"> · {name(t.assignee_id)}</span> : null}
-                </p>
-              ))}
+              {jobsNow.slice(0, 3).map((t) => {
+                const done = doneIds.includes(t.id);
+                return (
+                  <div key={t.id} className={`ss-job${done ? ' is-done' : ''}`}>
+                    <button type="button" className="ss-tick" aria-label={`Done: ${t.title}`} aria-pressed={done} onClick={(e) => void finishJob(e, t)}>
+                      <Check size={34} strokeWidth={3.5} />
+                    </button>
+                    <p className={`ss-item${t.due_on && t.due_on < today ? ' ss-late' : ''}`}>
+                      {t.title}{name(t.assignee_id) ? <span className="ss-who"> · {name(t.assignee_id)}</span> : null}
+                    </p>
+                  </div>
+                );
+              })}
+              {failed && <p className="ss-oops">Couldn't save that. Check the internet and try again.</p>}
             </>
           )}
           {slide === 'countdown' && (
@@ -265,9 +310,13 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
             <>
               <h3><Tv size={24} /> Tonight's pick</h3>
               <div className="ss-pick">
-                <span className="ss-pick-title">{pick.name}</span>
-                <span className="ss-pill">{pick.next}</span>
+                <span className="ss-pick-title">{pick.title.name}</span>
+                <span className="ss-pill">{pick.label}</span>
               </div>
+              <button type="button" className={`ss-done-btn${doneIds.includes(pick.title.id) ? ' is-done' : ''}`} onClick={(e) => void watchedIt(e)}>
+                <Check size={32} strokeWidth={3.5} /> {doneIds.includes(pick.title.id) ? 'Nice!' : pick.title.kind === 'film' ? 'Watched it' : `Watched ${pick.label}`}
+              </button>
+              {failed && <p className="ss-oops">Couldn't save that. Check the internet and try again.</p>}
             </>
           )}
         </section>
