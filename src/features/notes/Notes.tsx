@@ -1,3 +1,4 @@
+import { POSTIT_CHOICES, postitColour, postitTilt } from '../../lib/postits';
 import { useState } from 'react';
 import { Check, Pin, Plus, Trash2, Undo2 } from 'lucide-react';
 import { Screen } from '../../components/Screen';
@@ -23,7 +24,6 @@ export interface Note {
   created_at: string;
 }
 type NoteColour = 'sand' | 'sage' | 'sky' | 'clay' | 'plum';
-const COLOURS: NoteColour[] = ['sand', 'sage', 'sky', 'clay', 'plum'];
 const COLS = 'id,body,from_member,to_member,colour,pinned,done_at,created_at';
 
 /** Pinned first, then newest. */
@@ -90,7 +90,7 @@ export function NotesScreen() {
           ) : (
             <ul className="note-board">
               {list.map((n) => (
-                <li key={n.id} className={`note note-${n.colour}`}>
+                <li key={n.id} className={`note postit-${postitColour(n.colour)}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
                   <div className="note-head">
                     <span className="note-to">{n.to_member ? `For ${n.to_member === me?.id ? 'you' : name(n.to_member) ?? 'someone'}` : 'For everyone'}</span>
                     {n.pinned && <Pin size={16} aria-label="Pinned" />}
@@ -159,9 +159,9 @@ function WriteNote({ householdId, me, members, onClose, onSaved }: {
       <div className="field">
         <span className="field-label">Colour</span>
         <div className="swatches" role="radiogroup" aria-label="Note colour">
-          {COLOURS.map((c) => (
-            <button key={c} type="button" role="radio" aria-checked={colour === c} aria-label={c}
-              className={`swatch note-${c}`} onClick={() => setColour(c)} />
+          {POSTIT_CHOICES.map((c) => (
+            <button key={c.value} type="button" role="radio" aria-checked={colour === c.value} aria-label={c.label}
+              className={`swatch postit-${postitColour(c.value)}`} onClick={() => setColour(c.value)} />
           ))}
         </div>
       </div>
