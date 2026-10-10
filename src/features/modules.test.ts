@@ -66,8 +66,8 @@ describe('notes', () => {
 
 import { slidesToShow } from './screensaver/Screensaver';
 describe('screensaver slides', () => {
-  it('always shows the calendar, and skips empty topics', () => {
-    expect(slidesToShow({ jobs: true, watch: false, notes: true, shopping: false, money: true })).toEqual(['calendar', 'jobs', 'notes', 'money']);
-    expect(slidesToShow({ jobs: false, watch: false, notes: false, shopping: false, money: false })).toEqual(['calendar']);
+  it('bottom panel: always the week ahead, and skips empty topics', () => {
+    expect(slidesToShow({ shopping: true, money: false, watchlist: true })).toEqual(['week', 'shopping', 'watchlist']);
+    expect(slidesToShow({ shopping: false, money: false, watchlist: false })).toEqual(['week']);
   });
 });
