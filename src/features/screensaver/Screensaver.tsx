@@ -57,12 +57,13 @@ interface NoteLite { id: string; body: string; from_member: string | null; to_me
 interface EventLite extends EventLike { title: string; member_id: string | null; location: string | null }
 interface ItemLite { id: string; name: string; qty: string | null; list_id: string }
 
-export type SlideId = 'calendar' | 'jobs' | 'watch' | 'notes' | 'shopping' | 'money';
+/** The bottom panel rotates through these; the four "today" boxes above always stay. */
+export type SlideId = 'week' | 'shopping' | 'money' | 'watchlist';
 export const SLIDE_SECONDS = 12;
 
-/** Which slides to cycle through: the calendar always, the rest only when they have something to show. */
-export function slidesToShow(has: Record<Exclude<SlideId, 'calendar'>, boolean>): SlideId[] {
-  return (['calendar', 'jobs', 'watch', 'notes', 'shopping', 'money'] as SlideId[]).filter((id) => id === 'calendar' || has[id]);
+/** Which bottom slides to cycle through: the week ahead always, the rest only when they have something to show. */
+export function slidesToShow(has: Record<Exclude<SlideId, 'week'>, boolean>): SlideId[] {
+  return (['week', 'shopping', 'money', 'watchlist'] as SlideId[]).filter((id) => id === 'week' || has[id]);
 }
 
 export function Screensaver({ onWake }: { onWake: () => void }) {
@@ -114,7 +115,6 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
 
   const name = (id: string | null) => members.find((m) => m.id === id)?.display_name;
   const week = expandEvents(events.data ?? [], today, weekEnd);
-  const byDay = week.reduce<Record<string, typeof week>>((acc, o) => { (acc[o.day] ??= []).push(o); return acc; }, {});
   const watching = (titles.data ?? []).filter((t) => t.status === 'watching').map((t) => {
     const next = t.kind === 'show' ? nextEpisode(t.seasons, (views.data ?? []).filter((v) => v.title_id === t.id)) : null;
     return { id: t.id, name: t.name, next: next ? `S${next.season} E${next.episode}` : t.kind === 'film' ? 'Film' : 'All caught up' };
@@ -124,12 +124,15 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const chart = trend && trend.length ? spendingSeries(trend, ['RENT']) : null;
   const hasMoney = !!chart && chart.data.some((d) => Object.values(d.values).some((v) => v > 0));
 
+  const todayOcc = week.filter((o) => o.day === today);
+  const laterOcc = week.filter((o) => o.day !== today);
+  const laterByDay = laterOcc.reduce<Record<string, typeof week>>((acc, o) => { (acc[o.day] ??= []).push(o); return acc; }, {});
+  const jobsNow = (tasks.data ?? []).filter((t) => !t.due_on || t.due_on <= today);
+
   const slides = slidesToShow({
-    jobs: (tasks.data ?? []).length > 0,
-    watch: watching.length + wantList.length > 0,
-    notes: (notes.data ?? []).length > 0,
     shopping: (items.data ?? []).length > 0,
     money: hasMoney,
+    watchlist: wantList.length > 0,
   });
   useEffect(() => {
     const id = window.setInterval(() => setSlideIdx((i) => i + 1), SLIDE_SECONDS * 1000);
@@ -161,88 +164,85 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
           <OvieSheep size={64} />
         </div>
 
+        {/* Always on screen: today at a glance */}
+        <div className="ss-grid">
+          <section className="ss-card">
+            <h3><CalendarDays size={18} /> Today</h3>
+            {todayOcc.length === 0 ? <p className="ss-quiet">Nothing on</p> : todayOcc.slice(0, 3).map((o) => (
+              <p key={o.event.id} className="ss-line">
+                <span className="ss-when">{o.event.all_day ? 'All day' : fmtTime(o.start)}</span>{o.event.title}
+              </p>
+            ))}
+          </section>
+          <section className="ss-card">
+            <h3><SquareCheckBig size={18} /> Jobs</h3>
+            {jobsNow.length === 0 ? <p className="ss-quiet">All done</p> : jobsNow.slice(0, 3).map((t) => (
+              <p key={t.id} className={`ss-line${t.due_on && t.due_on < today ? ' ss-late' : ''}`}>
+                {t.title}{name(t.assignee_id) ? <span className="ss-who"> · {name(t.assignee_id)}</span> : null}
+              </p>
+            ))}
+          </section>
+          <section className="ss-card">
+            <h3><Tv size={18} /> Up next</h3>
+            {watching.length === 0 ? <p className="ss-quiet">Nothing on the go</p> : watching.slice(0, 3).map((w) => (
+              <p key={w.id} className="ss-line">{w.name}<span className="ss-who"> · {w.next}</span></p>
+            ))}
+          </section>
+          <section className="ss-card">
+            <h3><MessageSquare size={18} /> Notes</h3>
+            {(notes.data ?? []).length === 0 ? <p className="ss-quiet">No notes</p> : (notes.data ?? []).slice(0, 3).map((n) => (
+              <p key={n.id} className="ss-line">“{n.body}”<span className="ss-who">{name(n.from_member) ? ` — ${name(n.from_member)}` : ''}</span></p>
+            ))}
+          </section>
+        </div>
+
+        {/* Rotating: more detail, one topic at a time */}
         <section className="ss-slide" key={slide + slideIdx} aria-live="polite">
-          {slide === 'calendar' && (
+          {slide === 'week' && (
             <>
-              <h3><CalendarDays size={20} /> This week</h3>
-              {week.length === 0 ? <p className="ss-big-quiet">Nothing on this week</p> : (
+              <h3><CalendarDays size={18} /> Coming up this week</h3>
+              {laterOcc.length === 0 ? <p className="ss-quiet">Nothing else this week</p> : (
                 <div className="ss-days">
-                  {Object.entries(byDay).slice(0, 4).map(([day, occ]) => (
-                    <div key={day} className="ss-day">
+                  {Object.entries(laterByDay).slice(0, 4).map(([day, occ]) => (
+                    <div key={day}>
                       <div className="ss-day-label">{dayLabel(day, today)}</div>
-                      {occ.slice(0, 3).map((o) => (
+                      {occ.slice(0, 2).map((o) => (
                         <p key={o.event.id + o.day} className="ss-line">
-                          <span className="ss-when">{o.event.all_day ? 'All day' : fmtTime(o.start)}</span>
-                          {o.event.title}
+                          <span className="ss-when">{o.event.all_day ? 'All day' : fmtTime(o.start)}</span>{o.event.title}
                           {name(o.event.member_id) ? <span className="ss-who"> · {name(o.event.member_id)}</span> : null}
-                          {o.event.location ? <span className="ss-who"> · {o.event.location}</span> : null}
                         </p>
                       ))}
-                      {occ.length > 3 && <p className="ss-who">+{occ.length - 3} more</p>}
                     </div>
                   ))}
                 </div>
               )}
             </>
           )}
-
-          {slide === 'jobs' && (
-            <>
-              <h3><SquareCheckBig size={20} /> Jobs</h3>
-              {(tasks.data ?? []).map((t) => (
-                <p key={t.id} className={`ss-row${t.due_on && t.due_on < today ? ' ss-late' : ''}`}>
-                  <span className="ss-when">{t.due_on ? (t.due_on < today ? 'Overdue' : dayLabel(t.due_on, today)) : 'Anytime'}</span>
-                  <span className="ss-row-text">{t.title}</span>
-                  <span className="ss-who">{name(t.assignee_id) ?? 'Anyone'}</span>
-                </p>
-              ))}
-            </>
-          )}
-
-          {slide === 'watch' && (
-            <>
-              <h3><Tv size={20} /> Watch</h3>
-              {watching.length > 0 && <div className="ss-sub">Up next</div>}
-              {watching.slice(0, 4).map((w) => (
-                <p key={w.id} className="ss-row"><span className="ss-row-text">{w.name}</span><span className="ss-ep">{w.next}</span></p>
-              ))}
-              {wantList.length > 0 && <div className="ss-sub">On the watchlist</div>}
-              {wantList.slice(0, 4).map((t) => <p key={t.id} className="ss-row"><span className="ss-row-text">{t.name}</span></p>)}
-            </>
-          )}
-
-          {slide === 'notes' && (
-            <>
-              <h3><MessageSquare size={20} /> Notes</h3>
-              {(notes.data ?? []).map((n) => (
-                <div key={n.id} className="ss-note-card">
-                  <p className="ss-note-body">“{n.body}”</p>
-                  <p className="ss-who">{name(n.from_member) ? `— ${name(n.from_member)}` : ''}{n.to_member ? ` for ${name(n.to_member) ?? ''}` : ' for everyone'}</p>
-                </div>
-              ))}
-            </>
-          )}
-
           {slide === 'shopping' && (
             <>
-              <h3><ShoppingCart size={20} /> Shopping</h3>
+              <h3><ShoppingCart size={18} /> Shopping list</h3>
               <ul className="ss-shoplist">
-                {(items.data ?? []).map((i) => <li key={i.id}>{i.name}{i.qty ? <span className="ss-who"> · {i.qty}</span> : null}</li>)}
+                {(items.data ?? []).slice(0, 10).map((i) => <li key={i.id}>{i.name}{i.qty ? <span className="ss-who"> · {i.qty}</span> : null}</li>)}
               </ul>
             </>
           )}
-
           {slide === 'money' && chart && (
             <>
-              <h3><Wallet size={20} /> House spending, last 6 months <span className="ss-who">(not counting rent)</span></h3>
-              <div className="ss-chart"><StackedBars data={chart.data} series={chart.series} height={250} compact ariaLabel="House spending per month, not counting rent" /></div>
+              <h3><Wallet size={18} /> House spending <span className="ss-who">(last 6 months, not counting rent)</span></h3>
+              <div className="ss-chart"><StackedBars data={chart.data} series={chart.series} height={130} compact ariaLabel="House spending per month, not counting rent" /></div>
+            </>
+          )}
+          {slide === 'watchlist' && (
+            <>
+              <h3><Tv size={18} /> On the watchlist</h3>
+              <ul className="ss-shoplist">{wantList.slice(0, 8).map((t) => <li key={t.id} className="ss-nobox">{t.name}</li>)}</ul>
             </>
           )}
         </section>
 
         {slides.length > 1 && (
           <div className="ss-dots" aria-hidden="true">
-            {slides.map((s, i) => <i key={s} className={i === slideIdx % slides.length ? 'on' : ''} />)}
+            {slides.map((s2, i) => <i key={s2} className={i === slideIdx % slides.length ? 'on' : ''} />)}
           </div>
         )}
       </div>
