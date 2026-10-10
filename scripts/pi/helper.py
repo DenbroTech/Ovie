@@ -18,11 +18,28 @@ KILL = os.environ.get("OVIE_HELPER_KILL", "pkill -f ovie-kiosk/profile")
 POWEROFF = os.environ.get("OVIE_HELPER_POWEROFF", "systemctl poweroff || sudo -n /sbin/shutdown -h now")
 REBOOT = os.environ.get("OVIE_HELPER_REBOOT", "systemctl reboot || sudo -n /sbin/shutdown -r now")
 
+def ovie_url() -> str:
+    try:
+        return (DIR / "url").read_text().strip() or "https://denbrotech.github.io/Ovie/"
+    except OSError:
+        return "https://denbrotech.github.io/Ovie/"
+
+
 def page(title: str, sub: str) -> bytes:
+    # If the Pi doesn't power off within a minute, a "Back to Ovie" link fades in so the screen is never stuck.
     return f"""<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">
-<title>Ovie</title><body style="margin:0;height:100vh;display:grid;place-items:center;background:#1b1916;
-color:#f2ece3;font:700 28px system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box">
-<div>{title}<br><span style="font-size:18px;font-weight:600;color:#b3a99b">{sub}</span></div></body>""".encode()
+<title>Ovie</title><style>@keyframes show{{to{{opacity:1}}}}a{{opacity:0;animation:show .5s 60s forwards;
+display:inline-block;margin-top:32px;padding:14px 24px;border-radius:12px;background:#f2ece3;color:#1b1916;
+text-decoration:none;font-size:20px}}</style><body style="margin:0;height:100vh;display:grid;place-items:center;
+background:#1b1916;color:#f2ece3;font:700 28px system-ui,sans-serif;text-align:center;padding:24px;box-sizing:border-box">
+<div>{title}<br><span style="font-size:18px;font-weight:600;color:#b3a99b">{sub}</span><br>
+<a href="{ovie_url()}">Didn't work? Back to Ovie</a></div></body>""".encode()
+
+
+def run(cmd: str):
+    r = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    if r.returncode:
+        print(f"helper: '{cmd}' failed ({r.returncode}): {r.stderr.strip()}", flush=True)
 
 
 SHUTDOWN_PAGE = page("Shutting down&hellip;",
@@ -58,7 +75,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             cmd = POWEROFF if off else REBOOT
-            threading.Timer(2.0, lambda: subprocess.run(cmd, shell=True)).start()
+            threading.Timer(2.0, lambda: run(cmd)).start()
             return
         if self.path == "/ok":
             body = b"ovie-kiosk"
@@ -69,7 +86,11 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(body)
             return
-        self.send_error(404)
+        # Anything else (e.g. a button newer than this helper): go back to Ovie rather than a dead-end error page.
+        self.send_response(302)
+        self.send_header("Location", ovie_url())
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def log_message(self, *args):
         pass

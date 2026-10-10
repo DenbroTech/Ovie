@@ -50,7 +50,7 @@ That's it. You can unplug the keyboard.
 | File (in `~/.ovie-kiosk/`) | What it does |
 |---|---|
 | `kiosk.sh` | Starts Chromium full screen on https://denbrotech.github.io/Ovie/ and restarts it if it closes, unless you chose "Switch to the desktop". Waits for the internet after power-on. |
-| `helper.py` | A tiny helper that only listens on the Pi itself (127.0.0.1:8765). Ovie's "Switch to the desktop", "Restart the Pi" and "Shut down the Pi" buttons open it. Nothing on your network can reach it. `kiosk.sh` fetches the newest copy from GitHub each time it starts, so new buttons arrive without reinstalling. |
+| `helper.py` | A tiny helper that only listens on the Pi itself (127.0.0.1:8765). Ovie's "Switch to the desktop", "Restart the Pi" and "Shut down the Pi" buttons open it. Nothing on your network can reach it. `kiosk.sh` fetches the newest copy of itself and the helper from GitHub each time it starts, so updates arrive without reinstalling. If the Pi can't power off, a "Back to Ovie" link appears after a minute. |
 | `profile/` | Chromium's own data for Ovie: keeps this screen paired. |
 | `uninstall.sh` | Removes the autostart, icons and helper. |
 

@@ -24,20 +24,21 @@ for _ in $(seq 1 "${OVIE_NET_WAIT:-30}"); do
   sleep 2
 done
 
-# Fetch the newest helper (new Settings buttons arrive without reinstalling); keep the old one if anything's off.
+# Fetch the newest launcher and helper, so updates reach the Pi without reinstalling.
+# Each is checked before it replaces the old one; the launcher's update applies from its next start.
 RAW="$(cat "$DIR/raw" 2>/dev/null || echo 'https://raw.githubusercontent.com/DenbroTech/Ovie/main/scripts/pi')"
 if curl -fsSL --max-time 15 "$RAW/helper.py" -o "$DIR/helper.py.new" 2>/dev/null && python3 -m py_compile "$DIR/helper.py.new" 2>/dev/null; then
-  if ! cmp -s "$DIR/helper.py.new" "$DIR/helper.py"; then
-    mv "$DIR/helper.py.new" "$DIR/helper.py"
-    pkill -f "$DIR/helper.py" 2>/dev/null; sleep 1
-  fi
+  cmp -s "$DIR/helper.py.new" "$DIR/helper.py" || mv "$DIR/helper.py.new" "$DIR/helper.py"
 fi
-rm -f "$DIR/helper.py.new"
+if curl -fsSL --max-time 15 "$RAW/kiosk.sh" -o "$DIR/kiosk.sh.new" 2>/dev/null && bash -n "$DIR/kiosk.sh.new" 2>/dev/null \
+   && grep -q 'ovie-kiosk' "$DIR/kiosk.sh.new"; then
+  cmp -s "$DIR/kiosk.sh.new" "$DIR/kiosk.sh" || { chmod +x "$DIR/kiosk.sh.new"; mv "$DIR/kiosk.sh.new" "$DIR/kiosk.sh"; }
+fi
+rm -f "$DIR/helper.py.new" "$DIR/kiosk.sh.new"
 
-# The little helper behind Ovie's Settings buttons (127.0.0.1 only).
-if ! pgrep -f "$DIR/helper.py" >/dev/null; then
-  nohup python3 "$DIR/helper.py" >>"$LOG" 2>&1 9>&- &   # 9>&-: don't hand the launcher lock to the helper
-fi
+# The little helper behind Ovie's Settings buttons (127.0.0.1 only). Always start a fresh one so it's the newest.
+pkill -f "$DIR/helper.py" 2>/dev/null && sleep 1
+nohup python3 "$DIR/helper.py" >>"$LOG" 2>&1 9>&- &   # 9>&-: don't hand the launcher lock to the helper
 
 # Keep the screen awake while Ovie is showing (works on X11; Wayland setups use raspi-config's setting).
 command -v xset >/dev/null && [ -n "${DISPLAY:-}" ] && { xset s off; xset -dpms; xset s noblank; } 2>/dev/null
