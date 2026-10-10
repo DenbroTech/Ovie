@@ -12,7 +12,10 @@ const nice = (s: string) => s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 const FIXED = ['RENT', 'GROCERIES', 'BILLS', 'SHOP', 'OTHER'];
 const MAX_SERIES = 6;
 
-export function spendingSeries(trend: TrendMonth[]): { series: BarSeries[]; data: BarDatum[] } {
+/** `exclude` leaves categories out (e.g. RENT on the screensaver). Colours stay fixed per category either way. */
+export function spendingSeries(trend: TrendMonth[], exclude: string[] = []): { series: BarSeries[]; data: BarDatum[] } {
+  const skip = new Set(exclude.map((e) => e.toUpperCase()));
+  trend = trend.map((m) => ({ ...m, spent: m.spent.filter((g) => !skip.has(g.group.toUpperCase())) }));
   const seen = new Set<string>();
   for (const m of trend) for (const g of m.spent) seen.add(g.group.toUpperCase());
   const extra = [...seen].filter((g) => !FIXED.includes(g)).sort();

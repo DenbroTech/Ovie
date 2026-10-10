@@ -14,6 +14,12 @@ describe('finance chart data', () => {
     expect(data[1].values).toEqual({ GROCERIES: 250, BILLS: 80 });
   });
 
+  it('can leave rent out without changing the other colours', () => {
+    const { series, data } = spendingSeries(trend, ['rent']);
+    expect(series.map((s) => [s.label, s.colour])).toEqual([['Groceries', 'var(--series-2)'], ['Bills', 'var(--series-3)']]);
+    expect(data[0].values).toEqual({ GROCERIES: 300 });
+  });
+
   it('folds more than six categories into Other', () => {
     const many: TrendMonth[] = [{ month: '2026-09-01', paid_in: [], spent: ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'RENT'].map((g) => ({ group: g, total: 1 })) }];
     const { series, data } = spendingSeries(many);
