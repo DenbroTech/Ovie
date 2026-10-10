@@ -74,7 +74,9 @@
   --app-h: calc(100dvh / var(--wall-zoom, 1) - var(--frame-top, 0px) - var(--frame-bottom, 0px));
   background: #000;
 }
+:root[data-device='wall'] body { background: #000; }  /* any strip outside Ovie's area blends into the frame */
 :root[data-device='wall'] #root {
+  background: var(--bg);
   position: fixed; height: auto; overflow: hidden; transform: translateZ(0);
   top: var(--frame-top, 0px); right: var(--frame-right, 0px); bottom: var(--frame-bottom, 0px); left: var(--frame-left, 0px);
 }
