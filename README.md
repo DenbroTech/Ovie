@@ -7,6 +7,7 @@ A household hub (tasks, shopping, calendar, TV tracking and more) for a framed R
 - Plan (schema, navigation, design): [docs/PLAN.md](docs/PLAN.md)
 - Setup steps (Supabase, PC, GitHub Pages): [docs/SETUP.md](docs/SETUP.md)
 - Backups: [docs/BACKUPS.md](docs/BACKUPS.md)
+- Raspberry Pi wall screen: [docs/PI.md](docs/PI.md)
 - Progress and what's left: [docs/STATUS.md](docs/STATUS.md)
 
 ## How it fits together
@@ -53,6 +54,6 @@ src/                 the app (app/ shell, components/, features/<module>/, lib/,
 public/              icons, manifest, service worker
 supabase/migrations  every database change, exactly as applied (all named ovie_*)
 supabase/tests       SQL tests (always rolled back)
-scripts/             backup-ovie.cmd / restore-ovie.cmd (ovie schema only)
+scripts/             backup-ovie.cmd / restore-ovie.cmd (ovie schema only); pi/ = kiosk installer
 docs/                brief, kickoff, plan, setup, backups, status
 ```

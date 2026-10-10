@@ -36,7 +36,11 @@
 
 ## Next
 
-Your redesign pass, then the Pi kiosk setup.
+Your redesign pass.
+
+## Raspberry Pi
+
+Kiosk installer ready (docs/PI.md): boots into Ovie, "Switch to the desktop" in Settings, Ovie icon to come back, auto-restart if Chromium closes. Tested here with a stand-in Chromium; not yet run on the real Pi.
 
 ## Later
 
