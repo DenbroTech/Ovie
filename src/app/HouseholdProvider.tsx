@@ -4,6 +4,7 @@ import { friendlyError } from '../lib/errors';
 import type { Device, Household, Member } from '../lib/types';
 import { useAuth } from './AuthProvider';
 import { useConnection } from './ConnectionProvider';
+import { DEFAULT_NIGHT, rememberNight } from './theme';
 
 /** loading → (setup | join) → ready.  setup = very first device; join = household exists, pair with code. */
 type Status = 'loading' | 'setup' | 'join' | 'ready' | 'error';
@@ -87,6 +88,13 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       void supabase.removeChannel(channel);
     };
   }, [hid, load, reportRealtime]);
+
+  // Share the home's night hours with the theme (Automatic = dark at night).
+  useEffect(() => {
+    if (!household) return;
+    const st = household.settings as { dark_from?: string; dark_until?: string };
+    rememberNight({ from: st.dark_from ?? DEFAULT_NIGHT.from, until: st.dark_until ?? DEFAULT_NIGHT.until, timeZone: household.timezone });
+  }, [household]);
 
   const thisDevice = useMemo(() => devices.find((d) => d.user_id === userId) ?? null, [devices, userId]);
   const me = useMemo(
