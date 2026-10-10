@@ -37,9 +37,13 @@ echo    %~1
 set /p OK=Type RESTORE to continue: 
 if /i not "!OK!"=="RESTORE" (echo Cancelled. Nothing was changed. & exit /b 1)
 
+psql "%OVIE_DB_URL%" -v ON_ERROR_STOP=1 -q -f "%~dp0restore-pre.sql"
+if errorlevel 1 (echo Could not prepare the restore. Nothing was changed. & exit /b 1)
 pg_restore --dbname "%OVIE_DB_URL%" --clean --if-exists --no-owner --single-transaction --exit-on-error "%~1"
 if errorlevel 1 (
-  echo Restore FAILED and was rolled back. Ovie is unchanged.
+  echo Restore FAILED and was rolled back. Ovie data is unchanged.
+  echo Putting the photo permissions back...
+  psql "%OVIE_DB_URL%" -v ON_ERROR_STOP=1 -q -f "%~dp0restore-fixups.sql"
   exit /b 1
 )
 psql "%OVIE_DB_URL%" -v ON_ERROR_STOP=1 -q -f "%~dp0restore-fixups.sql"

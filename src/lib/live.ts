@@ -17,6 +17,8 @@ export function useLive<T>(
   const loadRef = useRef(load);
   loadRef.current = load;
   const timer = useRef<number | undefined>(undefined);
+  // Unique per hook instance: two screens watching the same table must not share a channel.
+  const instance = useRef(Math.random().toString(36).slice(2, 10));
 
   const reload = useCallback(async () => {
     const res = await loadRef.current();
@@ -34,7 +36,7 @@ export function useLive<T>(
       window.clearTimeout(timer.current);
       timer.current = window.setTimeout(() => void reload(), 120);
     };
-    let channel = supabase.channel(`live:${key}:${householdId}`);
+    let channel = supabase.channel(`live:${key}:${householdId}:${instance.current}`);
     for (const table of tables) {
       channel = channel.on(
         'postgres_changes',

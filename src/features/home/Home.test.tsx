@@ -10,7 +10,7 @@ vi.mock('../../app/HouseholdProvider', () => ({
   }),
 }));
 
-vi.mock('./useBadges', () => ({ useBadges: () => ({ counts: { tasks: 2, shopping: 5, calendar: 0 }, todayEvents: [] }) }));
+vi.mock('./useBadges', () => ({ useBadges: () => ({ counts: { tasks: 2, shopping: 5, calendar: 0, notes: 0 }, todayEvents: [] }) }));
 
 import { Home } from './Home';
 
@@ -26,7 +26,7 @@ describe('Home', () => {
 
   it('shows all apps with live counts, and no badge when nothing is waiting', () => {
     render(<MemoryRouter><Home /></MemoryRouter>);
-    for (const name of ['Tasks', 'Shopping', 'Calendar', 'Watch', 'Finances', 'Settings']) {
+    for (const name of ['Tasks', 'Shopping', 'Calendar', 'Notes', 'Watch', 'Photos', 'Alarms', 'Finances', 'Settings']) {
       expect(screen.getByRole('link', { name: new RegExp(name) })).toBeInTheDocument();
     }
     expect(screen.getByLabelText('2 waiting')).toBeInTheDocument();

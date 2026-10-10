@@ -43,3 +43,14 @@ create function public.log_change() returns trigger language plpgsql as $$
 begin insert into public.audit_log(what) values (tg_op || ' ' || tg_table_name); return null; end $$;
 create trigger house_tx_audit after insert or update or delete on public.house_tx
   for each row execute function public.log_change();
+
+-- Minimal Supabase Storage tables (bucket + object rows) for policy tests.
+create schema storage;
+create table storage.buckets (id text primary key, name text, public boolean default false,
+  file_size_limit bigint, allowed_mime_types text[]);
+create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets(id),
+  name text, owner uuid, created_at timestamptz default now());
+alter table storage.objects enable row level security;
+grant usage on schema storage to anon, authenticated, service_role;
+grant select, insert, update, delete on storage.objects to authenticated;
+grant select on storage.buckets to authenticated;

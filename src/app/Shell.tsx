@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
 import { Home } from '../features/home/Home';
 import { APPS } from './apps';
 import { useConnection } from './ConnectionProvider';
 import { useHousehold } from './HouseholdProvider';
+import { AlarmRinger } from '../features/alarms/Alarms';
+import { Screensaver, screensaverMinutes, useIdle } from '../features/screensaver/Screensaver';
 
 /** Direction of the slide: into an app = from the right, back home = from the left. */
 export function slideDirection(pathname: string, state: unknown): 'forward' | 'back' | 'none' {
@@ -34,11 +36,23 @@ export function Shell() {
     else delete root.dataset.device;
   }, [thisDevice?.kind]);
 
+  const isWall = thisDevice?.kind === 'wall';
+  const [minutes, setMinutes] = useState(() => screensaverMinutes(isWall));
+  useEffect(() => {
+    const update = () => setMinutes(screensaverMinutes(isWall));
+    update();
+    window.addEventListener('ovie-screensaver-changed', update);
+    return () => window.removeEventListener('ovie-screensaver-changed', update);
+  }, [isWall]);
+  const [idle, wake] = useIdle(minutes);
+
   const dir = slideDirection(location.pathname, location.state);
 
   return (
     <div className="shell">
       <OfflineBanner />
+      <AlarmRinger />
+      {idle && <Screensaver onWake={wake} />}
       <div key={location.pathname} className={`page slide-${dir}`}>
         <Routes location={location}>
           <Route path="/" element={<Home />} />

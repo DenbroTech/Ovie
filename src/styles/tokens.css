@@ -38,6 +38,17 @@
   --app-watch: #8d6a9f;
   --app-casa: #b8995a;
   --app-settings: #6c7680;
+  --app-notes: #c9a227;
+  --app-photos: #4f9a94;
+  --app-alarms: #c4554d;
+
+  /* chart series (validated categorical order, light surface) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
 
   --font: 'Nunito', ui-rounded, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --fs-xs: 0.8125rem;
@@ -93,6 +104,13 @@
   --sheep-wool: #f4ede1;
   --sheep-wool-edge: #cbbfac;
   --sheep-face: #2a241f;
+
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
 
   --shadow-1: 0 1px 2px rgb(0 0 0 / 0.3);
   --shadow-2: 0 4px 18px rgb(0 0 0 / 0.35);

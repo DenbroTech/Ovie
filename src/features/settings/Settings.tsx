@@ -7,6 +7,7 @@ import { useToast } from '../../components/Toast';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { useConnection } from '../../app/ConnectionProvider';
 import { useThemeChoice } from '../../app/theme';
+import { SCREENSAVER_CHOICES, screensaverMinutes, setScreensaverMinutes } from '../screensaver/Screensaver';
 import { supabase } from '../../lib/supabase';
 import { friendlyError } from '../../lib/errors';
 import { MEMBER_COLOURS, type Device, type Member, type ThemePref } from '../../lib/types';
@@ -44,6 +45,7 @@ export function SettingsScreen() {
   const [adding, setAdding] = useState(false);
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [ssMins, setSsMins] = useState(() => screensaverMinutes(thisDevice?.kind === 'wall'));
 
   useEffect(() => setHouseholdName(household?.name ?? ''), [household?.name]);
   const zones = useMemo(timeZones, []);
@@ -105,6 +107,13 @@ export function SettingsScreen() {
                 </button>
               ))}
             </div>
+          </div>
+          <div className="field">
+            <label htmlFor="ss">Screensaver</label>
+            <select id="ss" value={ssMins} onChange={(e) => { const n = Number(e.target.value); setSsMins(n); setScreensaverMinutes(n); }}>
+              {SCREENSAVER_CHOICES.map((n) => <option key={n} value={n}>{n === 0 ? 'Off' : `After ${n} minute${n === 1 ? '' : 's'} of no touching`}</option>)}
+            </select>
+            <span className="hint">Shows photos and today's info. Tap to come back.</span>
           </div>
           <button type="button" className="btn btn-secondary" disabled={disabled}
             onClick={() => setConfirm({ kind: 'unpair', device: thisDevice, self: true })}>

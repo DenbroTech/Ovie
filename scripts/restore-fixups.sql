@@ -1,3 +1,4 @@
+set client_min_messages = warning;
 -- Run automatically by restore-ovie.cmd after pg_restore.
 -- pg_dump --schema=ovie does not carry these two settings, so put them back.
 -- Touches only Ovie's own objects.
@@ -18,3 +19,14 @@ begin
     execute format('alter publication supabase_realtime add table ovie.%I', r.relname);
   end loop;
 end $$;
+
+-- Photo permissions (set aside by restore-pre.sql).
+drop policy if exists "ovie photos: paired devices read" on storage.objects;
+drop policy if exists "ovie photos: paired devices upload" on storage.objects;
+drop policy if exists "ovie photos: paired devices delete" on storage.objects;
+create policy "ovie photos: paired devices read" on storage.objects for select to authenticated
+  using (bucket_id = 'ovie-photos' and ovie.photo_path_allowed(name));
+create policy "ovie photos: paired devices upload" on storage.objects for insert to authenticated
+  with check (bucket_id = 'ovie-photos' and ovie.photo_path_allowed(name));
+create policy "ovie photos: paired devices delete" on storage.objects for delete to authenticated
+  using (bucket_id = 'ovie-photos' and ovie.photo_path_allowed(name));
