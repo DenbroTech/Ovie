@@ -122,6 +122,19 @@ export function expandEvents<E extends EventLike>(events: E[], fromIso: string, 
   return out.sort((a, b) => a.start.getTime() - b.start.getTime());
 }
 
+/** Countdowns for the wall: the next few one-off, monthly or yearly events (weekly ones aren't worth counting down to). */
+export function countdowns<E extends EventLike>(events: E[], today: string, horizonDays = 90, max = 3): Array<{ event: E; day: string; days: number }> {
+  const seen = new Set<string>();
+  const out: Array<{ event: E; day: string; days: number }> = [];
+  for (const o of expandEvents(events.filter((e) => e.repeat !== 'weekly'), addDays(today, 1), addDays(today, horizonDays))) {
+    if (seen.has(o.event.id)) continue;
+    seen.add(o.event.id);
+    out.push({ event: o.event, day: o.day, days: daysBetween(today, o.day) });
+    if (out.length === max) break;
+  }
+  return out;
+}
+
 export function timeLabel(d: Date): string {
   return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }

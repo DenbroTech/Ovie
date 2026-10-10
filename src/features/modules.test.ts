@@ -66,8 +66,43 @@ describe('notes', () => {
 
 import { slidesToShow } from './screensaver/Screensaver';
 describe('screensaver slides', () => {
-  it('bottom panel: always the week ahead, and skips empty topics', () => {
-    expect(slidesToShow({ shopping: true, money: false, watchlist: true })).toEqual(['week', 'shopping', 'watchlist']);
-    expect(slidesToShow({ shopping: false, money: false, watchlist: false })).toEqual(['week']);
+  it('one big panel: today first, and skips empty topics', () => {
+    expect(slidesToShow({ jobs: true, countdown: true, shopping: true, money: false, watch: true })).toEqual(['today', 'jobs', 'countdown', 'shopping', 'watch']);
+    expect(slidesToShow({})).toEqual(['today']);
+  });
+});
+
+import { moneyStatus, monthFraction } from './screensaver/Screensaver';
+import { moneyGlance } from '../lib/financeChart';
+import { countdowns } from '../lib/dates';
+describe('screensaver: money in plain words', () => {
+  const trend = [
+    { month: '2026-08-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 600 }, { group: 'BILLS', total: 200 }], paid_in: [] },
+    { month: '2026-09-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 800 }, { group: 'BILLS', total: 200 }], paid_in: [] },
+    { month: '2026-10-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 310 }, { group: 'SHOP', total: 40 }], paid_in: [] },
+  ];
+  it('leaves rent out, compares with a usual month and lists the biggest categories', () => {
+    const g = moneyGlance(trend, ['RENT'])!;
+    expect(g.spent).toBe(350);
+    expect(g.usual).toBe(900);
+    expect(g.top.map((t) => t.label)).toEqual(['Groceries', 'Shop']);
+  });
+  it('says on track, faster than usual, or over', () => {
+    expect(moneyStatus(300, 900, 0.5)?.tone).toBe('good');
+    expect(moneyStatus(700, 900, 0.5)?.tone).toBe('warn');
+    expect(moneyStatus(950, 900, 0.9)).toEqual({ text: expect.stringMatching(/50 more than a usual month/), tone: 'over' });
+    expect(moneyStatus(100, null, 0.5)).toBeNull();
+  });
+  it('knows how far through the month it is', () => {
+    expect(monthFraction('2026-10-31')).toBe(1);
+    expect(monthFraction('2026-02-14')).toBe(0.5);
+  });
+});
+
+describe('screensaver: countdowns', () => {
+  const ev = (id: string, starts_at: string, repeat: 'none' | 'weekly' | 'yearly' = 'none') => ({ id, starts_at, ends_at: null, all_day: true, repeat });
+  it('counts down to the next special things, skipping weekly ones and today', () => {
+    const c = countdowns([ev('yoga', '2026-10-03T09:00:00', 'weekly'), ev('bday', '2025-10-16T00:00:00', 'yearly'), ev('trip', '2026-12-20T00:00:00'), ev('today', '2026-10-11T00:00:00')], '2026-10-11');
+    expect(c.map((x) => [x.event.id, x.days])).toEqual([['bday', 5], ['trip', 70]]);
   });
 });
