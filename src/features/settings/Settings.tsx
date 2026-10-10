@@ -6,7 +6,7 @@ import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { useToast } from '../../components/Toast';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { useConnection } from '../../app/ConnectionProvider';
-import { useThemeChoice } from '../../app/theme';
+import { DEFAULT_NIGHT, useThemeChoice } from '../../app/theme';
 import { SCREENSAVER_CHOICES, screensaverMinutes, setScreensaverMinutes } from '../screensaver/Screensaver';
 import { supabase } from '../../lib/supabase';
 import { friendlyError } from '../../lib/errors';
@@ -73,6 +73,14 @@ export function SettingsScreen() {
     }
   }
 
+  const st = household.settings as { dark_from?: string; dark_until?: string };
+  const darkFrom = st.dark_from ?? DEFAULT_NIGHT.from;
+  const darkUntil = st.dark_until ?? DEFAULT_NIGHT.until;
+  const fmt = (t: string) => { const [h, m] = t.split(':').map(Number); const d = new Date(); d.setHours(h, m, 0, 0); return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); };
+  const nightLabel = `${fmt(darkFrom)} to ${fmt(darkUntil)}`;
+  const saveNight = (patch: { dark_from?: string; dark_until?: string }) =>
+    run(() => supabase.from('households').update({ settings: { ...household.settings, ...patch } }).eq('id', household.id), 'Night hours saved');
+
   const memberName = (id: string | null) => members.find((m) => m.id === id)?.display_name;
 
   return (
@@ -111,6 +119,7 @@ export function SettingsScreen() {
                 </button>
               ))}
             </div>
+            {theme === 'system' && <span className="hint">Automatic: dark at night ({nightLabel}), light in the day. Change the hours under Home.</span>}
           </div>
           <div className="field">
             <label htmlFor="ss">Screensaver</label>
@@ -173,6 +182,22 @@ export function SettingsScreen() {
               </select>
             </div>
           )}
+          <div className="field">
+            <span className="field-label">Night (dark) hours for “Automatic”</span>
+            <div className="field-row">
+              <div className="field">
+                <label htmlFor="dark-from">Dark from</label>
+                <input id="dark-from" type="time" value={darkFrom} disabled={disabled}
+                  onChange={(e) => e.target.value && void saveNight({ dark_from: e.target.value })} />
+              </div>
+              <div className="field">
+                <label htmlFor="dark-until">Light again at</label>
+                <input id="dark-until" type="time" value={darkUntil} disabled={disabled}
+                  onChange={(e) => e.target.value && void saveNight({ dark_until: e.target.value })} />
+              </div>
+            </div>
+            <span className="hint">Every screen set to Automatic follows these times.</span>
+          </div>
           <div className="field">
             <span className="field-label">Home code</span>
             <div className="row">
