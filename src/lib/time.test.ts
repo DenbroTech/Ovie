@@ -7,6 +7,11 @@ describe('time helpers', () => {
     expect(greetingFor(new Date(2026, 0, 1, 20))).toBe('Good evening');
     expect(greetingFor(new Date(2026, 0, 1, 2))).toBe('Good night');
   });
+  it('greets by the household time zone, not the device clock', () => {
+    const d = new Date('2026-10-10T00:08:00Z'); // 11:08 am in Sydney, 00:08 in UTC
+    expect(greetingFor(d, 'Australia/Sydney')).toBe('Good morning');
+    expect(greetingFor(d, 'UTC')).toBe('Good night');
+  });
   it('makes initials', () => {
     expect(initials('Andrew')).toBe('A');
     expect(initials('lina  maria gomez')).toBe('LG');

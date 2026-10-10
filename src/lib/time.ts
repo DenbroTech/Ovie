@@ -1,5 +1,6 @@
-export function greetingFor(date: Date): string {
-  const h = date.getHours();
+/** Greeting by the hour in the household's time zone (falls back to the device's). */
+export function greetingFor(date: Date, timeZone?: string): string {
+  const h = Number(new Intl.DateTimeFormat('en-GB', { hour: 'numeric', hourCycle: 'h23', timeZone }).format(date));
   if (h < 5) return 'Good night';
   if (h < 12) return 'Good morning';
   if (h < 18) return 'Good afternoon';

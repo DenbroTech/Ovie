@@ -10,6 +10,8 @@ vi.mock('../../app/HouseholdProvider', () => ({
   }),
 }));
 
+vi.mock('./useBadges', () => ({ useBadges: () => ({ counts: { tasks: 2, shopping: 5, calendar: 0 }, todayEvents: [] }) }));
+
 import { Home } from './Home';
 
 describe('Home', () => {
@@ -20,6 +22,18 @@ describe('Home', () => {
     expect(screen.getByText('Our home')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /settings/i })).toHaveAttribute('href', '/settings');
     expect(screen.getByRole('img', { name: /ovie the sheep/i })).toBeInTheDocument();
+  });
+
+  it('shows all apps with live counts, and no badge when nothing is waiting', () => {
+    render(<MemoryRouter><Home /></MemoryRouter>);
+    for (const name of ['Tasks', 'Shopping', 'Calendar', 'Watch', 'Finances', 'Settings']) {
+      expect(screen.getByRole('link', { name: new RegExp(name) })).toBeInTheDocument();
+    }
+    expect(screen.getByLabelText('2 waiting')).toBeInTheDocument();
+    expect(screen.getByLabelText('5 waiting')).toBeInTheDocument();
+    expect(screen.queryByLabelText('0 waiting')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /2 jobs to do today/ })).toHaveAttribute('href', '/tasks');
+    expect(screen.getByRole('link', { name: /5 things to buy/ })).toHaveAttribute('href', '/shopping');
   });
 
   it('greets the shared wall screen without a name', () => {
