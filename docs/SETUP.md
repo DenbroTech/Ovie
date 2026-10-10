@@ -50,4 +50,4 @@ The repo must stay **public** for free GitHub Pages. Nothing secret is in it: th
 
 ## 5. Raspberry Pi kiosk
 
-Coming in a later phase, with exact commands for your Pi model and OS.
+See [PI.md](PI.md): one command on the Pi, then it starts into Ovie at every power-on, with "Switch to the desktop" in Settings.
