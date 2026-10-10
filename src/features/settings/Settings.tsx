@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Copy, Laptop, Monitor, Pencil, RefreshCw, Smartphone, Trash2, UserPlus, Unlink } from 'lucide-react';
+import { Copy, Laptop, Monitor, Pencil, Power, RefreshCw, RotateCcw, Smartphone, Trash2, UserPlus, Unlink } from 'lucide-react';
 import { Screen } from '../../components/Screen';
 import { Avatar } from '../../components/Avatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -31,9 +31,13 @@ function lastSeen(iso: string): string {
 
 /** The Pi kiosk's local helper (scripts/pi/helper.py) — only reachable on the Pi itself. */
 export const DESKTOP_HELPER_URL = 'http://127.0.0.1:8765/exit';
+export const SHUTDOWN_HELPER_URL = 'http://127.0.0.1:8765/shutdown';
+export const RESTART_HELPER_URL = 'http://127.0.0.1:8765/restart';
 
 type Confirm =
   | { kind: 'desktop' }
+  | { kind: 'shutdown' }
+  | { kind: 'restart' }
   | { kind: 'code' }
   | { kind: 'remove-person'; member: Member }
   | { kind: 'unpair'; device: Device; self: boolean };
@@ -132,6 +136,16 @@ export function SettingsScreen() {
             <button type="button" className="btn btn-secondary" onClick={() => setConfirm({ kind: 'desktop' })}>
               <Laptop size={20} /> Switch to the desktop
             </button>
+          )}
+          {thisDevice.kind === 'wall' && (
+            <div className="row" style={{ gap: 'var(--s-2)', flexWrap: 'wrap' }}>
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirm({ kind: 'restart' })}>
+                <RotateCcw size={20} /> Restart the Pi
+              </button>
+              <button type="button" className="btn btn-secondary" onClick={() => setConfirm({ kind: 'shutdown' })}>
+                <Power size={20} /> Shut down the Pi
+              </button>
+            </div>
           )}
           <button type="button" className="btn btn-secondary" disabled={disabled}
             onClick={() => setConfirm({ kind: 'unpair', device: thisDevice, self: true })}>
@@ -262,6 +276,18 @@ export function SettingsScreen() {
           body="Ovie closes so you can use the Raspberry Pi as a normal computer. To come back, tap the Ovie icon on the desktop, or restart the Pi."
           confirmLabel="Switch" onCancel={() => setConfirm(null)}
           onConfirm={() => { window.location.href = DESKTOP_HELPER_URL; }} />
+      )}
+      {confirm?.kind === 'shutdown' && (
+        <ConfirmDialog title="Shut down the Pi?"
+          body="Wait until the screen goes dark and the Pi's green light stops flashing (about 20 seconds), then switch off the power at the wall."
+          confirmLabel="Shut down" onCancel={() => setConfirm(null)}
+          onConfirm={() => { window.location.href = SHUTDOWN_HELPER_URL; }} />
+      )}
+      {confirm?.kind === 'restart' && (
+        <ConfirmDialog title="Restart the Pi?"
+          body="The screen goes dark for about a minute, then Ovie comes back by itself."
+          confirmLabel="Restart" onCancel={() => setConfirm(null)}
+          onConfirm={() => { window.location.href = RESTART_HELPER_URL; }} />
       )}
       {confirm?.kind === 'code' && (
         <ConfirmDialog title="Make a new home code?"

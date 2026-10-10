@@ -30,6 +30,9 @@ That's it. You can unplug the keyboard.
 
 - **Power on** → Ovie.
 - **Use the Pi as a computer** → Ovie → Settings → This device → **Switch to the desktop** → Switch.
+- **Turning it off** → always shut down first, then switch off the power. Pulling the power while it's running can corrupt the SD card.
+  Ovie → Settings → This device → **Shut down the Pi** → Shut down. Wait until the screen goes dark and the Pi's green light stops flashing (about 20 seconds), then switch off at the wall.
+- **Restart** → Ovie → Settings → This device → **Restart the Pi**. Ovie comes back by itself in about a minute.
 - **Back to Ovie** → double-tap the **Ovie** icon on the desktop (or find Ovie in the menu), or restart.
 - If Chromium ever crashes, Ovie comes back by itself within a few seconds.
 - New Ovie versions load by themselves (within about 5 minutes), no need to touch the Pi.
@@ -47,7 +50,7 @@ That's it. You can unplug the keyboard.
 | File (in `~/.ovie-kiosk/`) | What it does |
 |---|---|
 | `kiosk.sh` | Starts Chromium full screen on https://denbrotech.github.io/Ovie/ and restarts it if it closes, unless you chose "Switch to the desktop". Waits for the internet after power-on. |
-| `helper.py` | A tiny helper that only listens on the Pi itself (127.0.0.1:8765). Ovie's "Switch to the desktop" button opens it, and it closes Ovie. Nothing on your network can reach it. |
+| `helper.py` | A tiny helper that only listens on the Pi itself (127.0.0.1:8765). Ovie's "Switch to the desktop", "Restart the Pi" and "Shut down the Pi" buttons open it. Nothing on your network can reach it. `kiosk.sh` fetches the newest copy from GitHub each time it starts, so new buttons arrive without reinstalling. |
 | `profile/` | Chromium's own data for Ovie: keeps this screen paired. |
 | `uninstall.sh` | Removes the autostart, icons and helper. |
 
