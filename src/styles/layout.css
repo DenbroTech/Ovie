@@ -68,9 +68,22 @@
   .home-footnote { grid-column: 1 / -1; }
 }
 
+/* The wall screen sits in a picture frame: lay everything out inside the part you can see.
+   #root becomes the "screen" (the transform makes full-screen overlays like the screensaver fill it, not the glass). */
+:root[data-device='wall'] {
+  --app-h: calc(100dvh / var(--wall-zoom, 1) - var(--frame-top, 0px) - var(--frame-bottom, 0px));
+  background: #000;
+}
+:root[data-device='wall'] #root {
+  position: fixed; height: auto; overflow: hidden; transform: translateZ(0);
+  top: var(--frame-top, 0px); right: var(--frame-right, 0px); bottom: var(--frame-bottom, 0px); left: var(--frame-left, 0px);
+}
+/* Long pages scroll inside the visible area (overlays stay pinned to it). */
+:root[data-device='wall'] .shell { height: 100%; min-height: 0; overflow-y: auto; }
+
 /* The wall screen always gets this layout, whatever resolution the Pi sends (Shell scales it to fit). */
 :root[data-device='wall'] .home {
-  height: calc(100dvh / var(--wall-zoom, 1)); max-width: none; box-sizing: border-box; overflow: hidden;
+  height: var(--app-h); max-width: none; box-sizing: border-box; overflow: hidden;
   grid-template-columns: 1fr 1.05fr; grid-template-rows: 1fr auto; align-items: center;
   padding: 22px 26px; gap: 12px 26px;
 }
@@ -154,7 +167,7 @@
 .sheet-overlay { align-items: end; padding: 0; }
 @media (min-width: 640px) { .sheet-overlay { align-items: center; padding: var(--s-4); } }
 .sheet {
-  width: min(560px, 100%); max-height: calc(92dvh / var(--wall-zoom, 1)); display: flex; flex-direction: column;
+  width: min(560px, 100%); max-height: calc(var(--app-h, 100dvh) * 0.92); display: flex; flex-direction: column;
   background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: var(--shadow-2);
   animation: sheet-up 220ms var(--ease) both;
 }
@@ -351,7 +364,7 @@ section + section > .group-label { margin-top: var(--s-5); }
 .photo-tile { width: 100%; aspect-ratio: 1; padding: 0; border: 0; border-radius: var(--r-md); overflow: hidden; background: var(--surface-2); cursor: pointer; display: grid; place-items: center; }
 .photo-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .photo-viewer { background: rgb(0 0 0 / 0.88); display: flex; flex-direction: column; gap: var(--s-3); }
-.photo-viewer img { max-width: 100%; max-height: calc(100dvh / var(--wall-zoom, 1) - 120px); border-radius: var(--r-md); object-fit: contain; }
+.photo-viewer img { max-width: 100%; max-height: calc(var(--app-h, 100dvh) - 120px); border-radius: var(--r-md); object-fit: contain; }
 .photo-viewer-bar { display: flex; gap: var(--s-3); }
 
 /* ---------- alarms ---------- */
@@ -456,3 +469,10 @@ section + section > .group-label { margin-top: var(--s-5); }
 .settings-grid > * { min-width: 0; }
 .settings-grid input, .settings-grid select, .settings-grid .segmented { max-width: 100%; box-sizing: border-box; }
 :root[data-device='wall'] .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* Fit to frame (wall screen settings) */
+.frame-fit { display: grid; gap: var(--s-2); }
+.frame-fit-row { display: grid; grid-template-columns: 4.2rem auto 2.6rem auto; align-items: center; gap: var(--s-2); font-weight: 700; }
+.frame-fit-row output { text-align: center; font-variant-numeric: tabular-nums; font-weight: 800; }
+.frame-fit-btn { min-width: var(--tap); padding: 0; }
+.btn-link { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); font-weight: 700; text-decoration: underline; cursor: pointer; }
