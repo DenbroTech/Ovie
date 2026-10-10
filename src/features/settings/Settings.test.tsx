@@ -16,7 +16,7 @@ vi.mock('../../app/HouseholdProvider', () => ({
   }),
 }));
 
-import { SettingsScreen, DESKTOP_HELPER_URL } from './Settings';
+import { SettingsScreen, DESKTOP_HELPER_URL, RESTART_HELPER_URL, SHUTDOWN_HELPER_URL } from './Settings';
 
 describe('Settings: switch to the desktop', () => {
   it('shows on the wall screen and asks before leaving Ovie', async () => {
@@ -31,5 +31,27 @@ describe('Settings: switch to the desktop', () => {
     kind = 'personal';
     render(<MemoryRouter><SettingsScreen /></MemoryRouter>);
     expect(screen.queryByRole('button', { name: /switch to the desktop/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('Settings: shut down and restart the Pi', () => {
+  it('asks first, and tells you when it is safe to switch off', async () => {
+    kind = 'wall';
+    render(<MemoryRouter><SettingsScreen /></MemoryRouter>);
+    await userEvent.click(screen.getByRole('button', { name: /shut down the pi/i }));
+    const dialog = screen.getByRole('alertdialog', { name: /shut down the pi/i });
+    expect(dialog).toHaveTextContent(/green light stops flashing/i);
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    await userEvent.click(screen.getByRole('button', { name: /restart the pi/i }));
+    expect(screen.getByRole('alertdialog', { name: /restart the pi/i })).toBeInTheDocument();
+    expect(SHUTDOWN_HELPER_URL).toBe('http://127.0.0.1:8765/shutdown');
+    expect(RESTART_HELPER_URL).toBe('http://127.0.0.1:8765/restart');
+  });
+
+  it('is not shown on phones', () => {
+    kind = 'personal';
+    render(<MemoryRouter><SettingsScreen /></MemoryRouter>);
+    expect(screen.queryByRole('button', { name: /shut down the pi/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /restart the pi/i })).not.toBeInTheDocument();
   });
 });

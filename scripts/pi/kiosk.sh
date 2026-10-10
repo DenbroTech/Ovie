@@ -18,7 +18,23 @@ rm -f "$FLAG"
 BROWSER="$(command -v chromium-browser || command -v chromium || true)"
 if [ -z "$BROWSER" ]; then echo "$(date) Chromium not found" >>"$LOG"; exit 1; fi
 
-# The little helper behind Ovie's "Switch to the desktop" button (127.0.0.1 only).
+# Wait up to a minute for the network after boot.
+for _ in $(seq 1 "${OVIE_NET_WAIT:-30}"); do
+  getent hosts denbrotech.github.io >/dev/null 2>&1 && break
+  sleep 2
+done
+
+# Fetch the newest helper (new Settings buttons arrive without reinstalling); keep the old one if anything's off.
+RAW="$(cat "$DIR/raw" 2>/dev/null || echo 'https://raw.githubusercontent.com/DenbroTech/Ovie/main/scripts/pi')"
+if curl -fsSL --max-time 15 "$RAW/helper.py" -o "$DIR/helper.py.new" 2>/dev/null && python3 -m py_compile "$DIR/helper.py.new" 2>/dev/null; then
+  if ! cmp -s "$DIR/helper.py.new" "$DIR/helper.py"; then
+    mv "$DIR/helper.py.new" "$DIR/helper.py"
+    pkill -f "$DIR/helper.py" 2>/dev/null; sleep 1
+  fi
+fi
+rm -f "$DIR/helper.py.new"
+
+# The little helper behind Ovie's Settings buttons (127.0.0.1 only).
 if ! pgrep -f "$DIR/helper.py" >/dev/null; then
   nohup python3 "$DIR/helper.py" >>"$LOG" 2>&1 9>&- &   # 9>&-: don't hand the launcher lock to the helper
 fi
@@ -26,11 +42,6 @@ fi
 # Keep the screen awake while Ovie is showing (works on X11; Wayland setups use raspi-config's setting).
 command -v xset >/dev/null && [ -n "${DISPLAY:-}" ] && { xset s off; xset -dpms; xset s noblank; } 2>/dev/null
 
-# Wait up to a minute for the network after boot.
-for _ in $(seq 1 "${OVIE_NET_WAIT:-30}"); do
-  getent hosts denbrotech.github.io >/dev/null 2>&1 && break
-  sleep 2
-done
 
 # Chromium remembers it was "killed" and nags; clear that so it never shows a bubble.
 PREFS="$DIR/profile/Default/Preferences"

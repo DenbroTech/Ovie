@@ -8,3 +8,4 @@ backups/
 *.dump
 coverage/
 *.tsbuildinfo
+__pycache__/
