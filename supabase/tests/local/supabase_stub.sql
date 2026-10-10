@@ -25,9 +25,19 @@ grant execute on function auth.uid() to anon, authenticated, service_role;
 
 create publication supabase_realtime;
 
--- Pretend ₲ryd: a public table with an audit trigger, to prove Ovie never touches it.
-create table public.house_tx (id serial primary key, amount numeric, merchant text);
-insert into public.house_tx (amount, merchant) values (-231.44, 'Woolies'), (-1420, 'rent');
+-- Pretend ₲ryd: house tables shaped like the real ones, plus an audit trigger,
+-- to prove Ovie only ever reads them.
+create table public.house_people (name text, share numeric, sort_order integer);
+insert into public.house_people values ('ANDREW', 0.6667, 1), ('LINA', 0.3333, 2);
+create table public.house_tx (
+  id uuid primary key default gen_random_uuid(), tx_date date, amount numeric, grp text,
+  direction text, merchant text, excluded boolean default false, note text, created_at timestamptz default now());
+insert into public.house_tx (tx_date, amount, grp, direction, merchant, excluded) values
+  (date_trunc('month', current_date)::date + 1, -231.44, 'Groceries', 'OUT', 'Woolies', false),
+  (date_trunc('month', current_date)::date + 2, -1420, 'RENT', 'OUT', 'rent', false),
+  (date_trunc('month', current_date)::date + 3, 600, 'LINA', 'IN', null, false),
+  (date_trunc('month', current_date)::date + 4, -99, 'SHOP', 'OUT', 'ignored', true),
+  (date_trunc('month', current_date)::date - 20, -50, 'BILLS', 'OUT', 'last month', false);
 create table public.audit_log (id serial primary key, at timestamptz default now(), what text);
 create function public.log_change() returns trigger language plpgsql as $$
 begin insert into public.audit_log(what) values (tg_op || ' ' || tg_table_name); return null; end $$;

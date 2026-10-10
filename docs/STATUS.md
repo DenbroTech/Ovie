@@ -10,13 +10,26 @@
 
 ## Waiting on you
 
-- Approve the `ovie_device_pairing` migration (the Supabase connector needs your OK because it replaces the two empty tables).
-- Expose the `ovie` schema (docs/SETUP.md, step 1).
-- Turn on anonymous sign-ins (docs/SETUP.md, step 2). Until then Ovie shows a message saying exactly that.
+- Nothing right now.
+
+## Done: core apps
+
+- **Home:** today at a glance (what's on, jobs due, things to buy) and live counts on the app icons.
+- **Tasks:** quick add; who (a person or anyone); due date; important; repeats (daily, weekly, fortnightly, monthly, every 3 months). Ticking a repeating job schedules the next one exactly once, even if ticked twice or undone and redone. Done list with undo.
+- **Shopping:** Groceries, Household and Hardware lists, plus your own. Fast add with quantity; tap to tick; "in the trolley"; clear ticked; "buy again" from what you've bought before. No accidental duplicates.
+- **Calendar:** coming-up list and month view. All-day events; weekly, monthly and yearly repeats (birthdays on 29 Feb and the 31st handled); who; where; notes.
+- **Watch:** shows and films. Progress kept separately for "together" and for each person. One-tap "Watched S1 E5", undo, tap episodes to correct them, mark a whole season. No episode descriptions, so no spoilers.
+- **Finances:** read-only from ₲ryd: this month's house spending by category, what each person paid in (with their share), and recent transactions. Earlier months are one tap away.
+
+## Known limits
+
+- Editing a repeating calendar event changes every repeat (no "just this one" yet).
+- Removing a person deletes their individual viewing history (their "together" history stays).
+- Finances refreshes every 5 minutes while open (₲ryd changes don't push live to Ovie).
 
 ## Next
 
-2. Dashboard → 3. Tasks and recurring jobs → 4. Shopping → 5. Calendar → 6. Watch → 7. Casa (proposal first).
+Your redesign pass, then: screensaver, Pi kiosk setup, notes, meals, reminders.
 
 ## Later
 
