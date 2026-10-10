@@ -8,6 +8,7 @@ import { useHousehold } from './HouseholdProvider';
 import { AlarmRinger } from '../features/alarms/Alarms';
 import { Screensaver, screensaverMinutes, useIdle } from '../features/screensaver/Screensaver';
 import { fitWall } from '../lib/wallFit';
+import { applyFrame } from '../lib/frame';
 
 /** Direction of the slide: into an app = from the right, back home = from the left. */
 export function slideDirection(pathname: string, state: unknown): 'forward' | 'back' | 'none' {
@@ -36,7 +37,8 @@ export function Shell() {
     if (thisDevice?.kind !== 'wall') { delete root.dataset.device; return; }
     root.dataset.device = 'wall';
     const unfit = fitWall(root);
-    return () => { unfit(); delete root.dataset.device; };
+    const unframe = applyFrame(root);
+    return () => { unfit(); unframe(); delete root.dataset.device; };
   }, [thisDevice?.kind]);
 
   const isWall = thisDevice?.kind === 'wall';

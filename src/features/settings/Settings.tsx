@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Copy, Laptop, Monitor, Pencil, Power, RefreshCw, RotateCcw, Smartphone, Trash2, UserPlus, Unlink } from 'lucide-react';
+import { Copy, Laptop, Minus, Monitor, Pencil, Plus, Power, RefreshCw, RotateCcw, Smartphone, Trash2, UserPlus, Unlink } from 'lucide-react';
 import { Screen } from '../../components/Screen';
 import { Avatar } from '../../components/Avatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -9,6 +9,7 @@ import { useConnection } from '../../app/ConnectionProvider';
 import { DEFAULT_NIGHT, useThemeChoice } from '../../app/theme';
 import { SCREENSAVER_CHOICES, screensaverMinutes, setScreensaverMinutes } from '../screensaver/Screensaver';
 import { supabase } from '../../lib/supabase';
+import { DEFAULT_FRAME, FRAME_MAX, FRAME_STEP, setFrame, storedFrame, type FrameEdge } from '../../lib/frame';
 import { friendlyError } from '../../lib/errors';
 import { MEMBER_COLOURS, type Device, type Member, type ThemePref } from '../../lib/types';
 
@@ -132,6 +133,7 @@ export function SettingsScreen() {
             </select>
             <span className="hint">Shows photos and today's info. Tap to come back.</span>
           </div>
+          {thisDevice.kind === 'wall' && <FrameFit />}
           {thisDevice.kind === 'wall' && (
             <button type="button" className="btn btn-secondary" onClick={() => setConfirm({ kind: 'desktop' })}>
               <Laptop size={20} /> Switch to the desktop
@@ -356,6 +358,34 @@ function PersonDialog({
           <button type="submit" className="btn btn-primary" disabled={busy || !name.trim()}>Save</button>
         </div>
       </form>
+    </div>
+  );
+}
+
+const EDGES: Array<[FrameEdge, string]> = [['left', 'Left'], ['right', 'Right'], ['top', 'Top'], ['bottom', 'Bottom']];
+
+/** Nudge each edge in until nothing is hidden behind the picture frame. Changes show straight away. */
+function FrameFit() {
+  const [frame, setLocal] = useState(storedFrame);
+  const nudge = (edge: FrameEdge, by: number) => setLocal(setFrame({ ...frame, [edge]: frame[edge] + by }));
+  return (
+    <div className="field">
+      <span className="field-label">Fit to frame</span>
+      <div className="frame-fit">
+        {EDGES.map(([edge, label]) => (
+          <div key={edge} className="frame-fit-row">
+            <span>{label}</span>
+            <button type="button" className="btn btn-secondary frame-fit-btn" aria-label={`Move the ${edge} edge out`}
+              disabled={frame[edge] <= 0} onClick={() => nudge(edge, -FRAME_STEP)}><Minus size={20} /></button>
+            <output aria-label={`${label} edge`}>{frame[edge]}</output>
+            <button type="button" className="btn btn-secondary frame-fit-btn" aria-label={`Move the ${edge} edge in`}
+              disabled={frame[edge] >= FRAME_MAX} onClick={() => nudge(edge, FRAME_STEP)}><Plus size={20} /></button>
+          </div>
+        ))}
+      </div>
+      <span className="hint">If the frame hides part of the screen, tap + on that side until everything shows.{' '}
+        <button type="button" className="btn-link" onClick={() => setLocal(setFrame(DEFAULT_FRAME))}>Reset</button>
+      </span>
     </div>
   );
 }
