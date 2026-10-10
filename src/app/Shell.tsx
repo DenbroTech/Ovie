@@ -7,6 +7,7 @@ import { useConnection } from './ConnectionProvider';
 import { useHousehold } from './HouseholdProvider';
 import { AlarmRinger } from '../features/alarms/Alarms';
 import { Screensaver, screensaverMinutes, useIdle } from '../features/screensaver/Screensaver';
+import { fitWall } from '../lib/wallFit';
 
 /** Direction of the slide: into an app = from the right, back home = from the left. */
 export function slideDirection(pathname: string, state: unknown): 'forward' | 'back' | 'none' {
@@ -32,8 +33,10 @@ export function Shell() {
   // The wall screen (7" 1024x600 in the frame) gets bigger text, bigger targets and no mouse pointer.
   useEffect(() => {
     const root = document.documentElement;
-    if (thisDevice?.kind === 'wall') root.dataset.device = 'wall';
-    else delete root.dataset.device;
+    if (thisDevice?.kind !== 'wall') { delete root.dataset.device; return; }
+    root.dataset.device = 'wall';
+    const unfit = fitWall(root);
+    return () => { unfit(); delete root.dataset.device; };
   }, [thisDevice?.kind]);
 
   const isWall = thisDevice?.kind === 'wall';

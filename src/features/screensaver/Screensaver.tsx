@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
-import { CalendarDays, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
+import { CalendarDays, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
 import { OvieSheep } from '../../components/OvieSheep';
-import { StackedBars } from '../../components/charts/StackedBars';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { supabase } from '../../lib/supabase';
 import { useLive } from '../../lib/live';
 import { usePhotos } from '../../lib/photos';
 import { formatClock, formatLongDate } from '../../lib/time';
-import { addDays, dayLabel, expandEvents, nextEpisode, todayIso, type EventLike } from '../../lib/dates';
-import { spendingSeries, type TrendMonth } from '../../lib/financeChart';
+import { addDays, countdowns, daysBetween, expandEvents, money, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
+import { moneyGlance, type TrendMonth } from '../../lib/financeChart';
 
 // ---------- when to show ----------
 
@@ -57,13 +56,30 @@ interface NoteLite { id: string; body: string; from_member: string | null; to_me
 interface EventLite extends EventLike { title: string; member_id: string | null; location: string | null }
 interface ItemLite { id: string; name: string; qty: string | null; list_id: string }
 
-/** The bottom panel rotates through these; the four "today" boxes above always stay. */
-export type SlideId = 'week' | 'shopping' | 'money' | 'watchlist';
-export const SLIDE_SECONDS = 12;
+/** One big panel shows one topic at a time, readable from across the room. Today always comes first. */
+export type SlideId = 'today' | 'jobs' | 'countdown' | 'week' | 'notes' | 'shopping' | 'money' | 'watch';
+export const SLIDE_SECONDS = 10;
+const ORDER: SlideId[] = ['today', 'jobs', 'countdown', 'week', 'notes', 'shopping', 'money', 'watch'];
 
-/** Which bottom slides to cycle through: the week ahead always, the rest only when they have something to show. */
-export function slidesToShow(has: Record<Exclude<SlideId, 'week'>, boolean>): SlideId[] {
-  return (['week', 'shopping', 'money', 'watchlist'] as SlideId[]).filter((id) => id === 'week' || has[id]);
+/** Which topics to cycle through: today always, the rest only when they have something to show. */
+export function slidesToShow(has: Partial<Record<Exclude<SlideId, 'today'>, boolean>>): SlideId[] {
+  return ORDER.filter((id) => id === 'today' || has[id as Exclude<SlideId, 'today'>]);
+}
+
+/** How far through the month today is (0–1), for "on track" against a usual month. */
+export function monthFraction(today: string): number {
+  const d = parseIso(today);
+  const days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  return d.getDate() / days;
+}
+
+/** Plain words for the money slide: is this month's spending on track against a usual month? */
+export function moneyStatus(spent: number, usual: number | null, fraction: number): { text: string; tone: 'good' | 'warn' | 'over' } | null {
+  if (!usual) return null;
+  const left = usual - spent;
+  if (left < 0) return { text: `${money(Math.round(-left))} more than a usual month`, tone: 'over' };
+  if (spent <= usual * fraction * 1.1) return { text: `On track · ${money(Math.round(left))} left of a usual month`, tone: 'good' };
+  return { text: `Spending faster than usual · ${money(Math.round(left))} left`, tone: 'warn' };
 }
 
 export function Screensaver({ onWake }: { onWake: () => void }) {
@@ -120,19 +136,25 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     return { id: t.id, name: t.name, next: next ? `S${next.season} E${next.episode}` : t.kind === 'film' ? 'Film' : 'All caught up' };
   });
   const wantList = (titles.data ?? []).filter((t) => t.status === 'want');
-  // Rent dwarfs everything else, so the screensaver chart leaves it out.
-  const chart = trend && trend.length ? spendingSeries(trend, ['RENT']) : null;
-  const hasMoney = !!chart && chart.data.some((d) => Object.values(d.values).some((v) => v > 0));
+  // Rent dwarfs everything else (and never changes), so the wall leaves it out.
+  const glance = trend && trend.length ? moneyGlance(trend, ['RENT']) : null;
+  const hasMoney = !!glance && (glance.spent > 0 || !!glance.usual);
+  const status = glance ? moneyStatus(glance.spent, glance.usual, monthFraction(today)) : null;
+  const counts = countdowns(events.data ?? [], today);
+  const pick = watching[0] ?? (wantList[0] ? { id: wantList[0].id, name: wantList[0].name, next: wantList[0].kind === 'film' ? 'Film' : 'New show' } : null);
 
   const todayOcc = week.filter((o) => o.day === today);
   const laterOcc = week.filter((o) => o.day !== today);
-  const laterByDay = laterOcc.reduce<Record<string, typeof week>>((acc, o) => { (acc[o.day] ??= []).push(o); return acc; }, {});
   const jobsNow = (tasks.data ?? []).filter((t) => !t.due_on || t.due_on <= today);
 
   const slides = slidesToShow({
+    jobs: jobsNow.length > 0,
+    week: laterOcc.length > 0,
+    notes: (notes.data ?? []).length > 0,
     shopping: (items.data ?? []).length > 0,
+    countdown: counts.length > 0,
     money: hasMoney,
-    watchlist: wantList.length > 0,
+    watch: !!pick,
   });
   useEffect(() => {
     const id = window.setInterval(() => setSlideIdx((i) => i + 1), SLIDE_SECONDS * 1000);
@@ -140,6 +162,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   }, []);
   const slide = slides[slideIdx % slides.length];
   const current = pics.length ? pics[photoIdx % pics.length] : null;
+  const shortDay = (day: string) => daysBetween(today, day) === 1 ? 'Tomorrow' : parseIso(day).toLocaleDateString(undefined, { weekday: 'short' });
   const fmtTime = (d: Date) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: tz }).format(d);
 
   return (
@@ -161,81 +184,90 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
             <div className="ss-clock">{formatClock(now, tz)}</div>
             <div className="ss-date">{formatLongDate(now, tz)}</div>
           </div>
-          <OvieSheep size={64} />
+          <OvieSheep size={72} />
         </div>
 
-        {/* Always on screen: today at a glance */}
-        <div className="ss-grid">
-          <section className="ss-card">
-            <h3><CalendarDays size={18} /> Today</h3>
-            {todayOcc.length === 0 ? <p className="ss-quiet">Nothing on</p> : todayOcc.slice(0, 3).map((o) => (
-              <p key={o.event.id} className="ss-line">
-                <span className="ss-when">{o.event.all_day ? 'All day' : fmtTime(o.start)}</span>{o.event.title}
-              </p>
-            ))}
-          </section>
-          <section className="ss-card">
-            <h3><SquareCheckBig size={18} /> Jobs</h3>
-            {jobsNow.length === 0 ? <p className="ss-quiet">All done</p> : jobsNow.slice(0, 3).map((t) => (
-              <p key={t.id} className={`ss-line${t.due_on && t.due_on < today ? ' ss-late' : ''}`}>
-                {t.title}{name(t.assignee_id) ? <span className="ss-who"> · {name(t.assignee_id)}</span> : null}
-              </p>
-            ))}
-          </section>
-          <section className="ss-card">
-            <h3><Tv size={18} /> Up next</h3>
-            {watching.length === 0 ? <p className="ss-quiet">Nothing on the go</p> : watching.slice(0, 3).map((w) => (
-              <p key={w.id} className="ss-line">{w.name}<span className="ss-who"> · {w.next}</span></p>
-            ))}
-          </section>
-          <section className="ss-card">
-            <h3><MessageSquare size={18} /> Notes</h3>
-            {(notes.data ?? []).length === 0 ? <p className="ss-quiet">No notes</p> : (notes.data ?? []).slice(0, 3).map((n) => (
-              <p key={n.id} className="ss-line">“{n.body}”<span className="ss-who">{name(n.from_member) ? ` — ${name(n.from_member)}` : ''}</span></p>
-            ))}
-          </section>
-        </div>
-
-        {/* Rotating: more detail, one topic at a time */}
+        {/* One topic at a time, in big type */}
         <section className="ss-slide" key={slide + slideIdx} aria-live="polite">
+          {slide === 'today' && (
+            <>
+              <h3><CalendarDays size={24} /> Today</h3>
+              {todayOcc.length === 0 ? <p className="ss-big-quiet">Nothing on today</p> : todayOcc.slice(0, 3).map((o) => (
+                <p key={o.event.id} className="ss-item">
+                  <span className="ss-when">{o.event.all_day ? 'All day' : fmtTime(o.start)}</span>{o.event.title}
+                </p>
+              ))}
+            </>
+          )}
+          {slide === 'jobs' && (
+            <>
+              <h3><SquareCheckBig size={24} /> Jobs to do{jobsNow.length > 3 ? ` · ${jobsNow.length}` : ''}</h3>
+              {jobsNow.slice(0, 3).map((t) => (
+                <p key={t.id} className={`ss-item${t.due_on && t.due_on < today ? ' ss-late' : ''}`}>
+                  {t.title}{name(t.assignee_id) ? <span className="ss-who"> · {name(t.assignee_id)}</span> : null}
+                </p>
+              ))}
+            </>
+          )}
+          {slide === 'countdown' && (
+            <>
+              <h3><Hourglass size={24} /> Countdown</h3>
+              <div className="ss-counts">
+                {counts.slice(0, 2).map((c) => (
+                  <div key={c.event.id} className="ss-count">
+                    <div className="ss-count-num">{c.days}<span>{c.days === 1 ? 'day' : 'days'}</span></div>
+                    <div className="ss-count-title">{c.event.title}</div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
           {slide === 'week' && (
             <>
-              <h3><CalendarDays size={18} /> Coming up this week</h3>
-              {laterOcc.length === 0 ? <p className="ss-quiet">Nothing else this week</p> : (
-                <div className="ss-days">
-                  {Object.entries(laterByDay).slice(0, 4).map(([day, occ]) => (
-                    <div key={day}>
-                      <div className="ss-day-label">{dayLabel(day, today)}</div>
-                      {occ.slice(0, 2).map((o) => (
-                        <p key={o.event.id + o.day} className="ss-line">
-                          <span className="ss-when">{o.event.all_day ? 'All day' : fmtTime(o.start)}</span>{o.event.title}
-                          {name(o.event.member_id) ? <span className="ss-who"> · {name(o.event.member_id)}</span> : null}
-                        </p>
-                      ))}
-                    </div>
-                  ))}
-                </div>
-              )}
+              <h3><CalendarDays size={24} /> Coming up</h3>
+              {laterOcc.slice(0, 3).map((o) => (
+                <p key={o.event.id + o.day} className="ss-item">
+                  <span className="ss-when">{shortDay(o.day)}</span>{o.event.title}
+                </p>
+              ))}
+            </>
+          )}
+          {slide === 'notes' && (
+            <>
+              <h3><MessageSquare size={24} /> Notes</h3>
+              {(notes.data ?? []).slice(0, 2).map((n) => (
+                <p key={n.id} className="ss-note">“{n.body}”{name(n.from_member) ? <span className="ss-who"> — {name(n.from_member)}</span> : null}</p>
+              ))}
             </>
           )}
           {slide === 'shopping' && (
             <>
-              <h3><ShoppingCart size={18} /> Shopping list</h3>
+              <h3><ShoppingCart size={24} /> To buy{(items.data ?? []).length > 6 ? ` · ${(items.data ?? []).length}` : ''}</h3>
               <ul className="ss-shoplist">
-                {(items.data ?? []).slice(0, 10).map((i) => <li key={i.id}>{i.name}{i.qty ? <span className="ss-who"> · {i.qty}</span> : null}</li>)}
+                {(items.data ?? []).slice(0, 6).map((i) => <li key={i.id}>{i.name}</li>)}
               </ul>
             </>
           )}
-          {slide === 'money' && chart && (
+          {slide === 'money' && glance && (
             <>
-              <h3><Wallet size={18} /> House spending <span className="ss-who">(last 6 months, not counting rent)</span></h3>
-              <div className="ss-chart"><StackedBars data={chart.data} series={chart.series} height={130} compact ariaLabel="House spending per month, not counting rent" /></div>
+              <h3><Wallet size={24} /> Spent this month <span className="ss-who">· not counting rent</span></h3>
+              <div className="ss-money-big">{money(Math.round(glance.spent))}</div>
+              {glance.usual ? (
+                <div className="ss-meter" aria-hidden="true">
+                  <i className={`tone-${status?.tone ?? 'good'}`} style={{ width: `${Math.min(100, (glance.spent / glance.usual) * 100)}%` }} />
+                  <b style={{ left: `${monthFraction(today) * 100}%` }} />
+                </div>
+              ) : null}
+              {status && <p className={`ss-money-status tone-${status.tone}`}>{status.tone === 'good' ? 'On track' : status.tone === 'warn' ? 'Spending fast' : 'Over a usual month'}</p>}
             </>
           )}
-          {slide === 'watchlist' && (
+          {slide === 'watch' && pick && (
             <>
-              <h3><Tv size={18} /> On the watchlist</h3>
-              <ul className="ss-shoplist">{wantList.slice(0, 8).map((t) => <li key={t.id} className="ss-nobox">{t.name}</li>)}</ul>
+              <h3><Tv size={24} /> Tonight's pick</h3>
+              <div className="ss-pick">
+                <span className="ss-pick-title">{pick.name}</span>
+                <span className="ss-pill">{pick.next}</span>
+              </div>
             </>
           )}
         </section>

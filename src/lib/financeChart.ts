@@ -54,3 +54,29 @@ export function paidInSeries(trend: TrendMonth[], people: string[]): { series: B
 export function monthLabel(iso: string): string {
   return new Date(`${iso.slice(0, 10)}T00:00`).toLocaleDateString(undefined, { month: 'short' });
 }
+
+export interface MoneyGlance {
+  spent: number;           // this month so far (excluded categories left out)
+  usual: number | null;    // average of earlier months that had spending
+  top: Array<{ label: string; total: number }>; // this month's biggest categories
+}
+
+/** A few big numbers for the wall screen instead of a chart: this month vs a usual month. */
+export function moneyGlance(trend: TrendMonth[], exclude: string[] = []): MoneyGlance | null {
+  if (!trend.length) return null;
+  const skip = new Set(exclude.map((e) => e.toUpperCase()));
+  const total = (m: TrendMonth) => m.spent.filter((g) => !skip.has(g.group.toUpperCase())).reduce((s, g) => s + Number(g.total), 0);
+  const sorted = [...trend].sort((a, b) => a.month.localeCompare(b.month));
+  const current = sorted[sorted.length - 1];
+  const earlier = sorted.slice(0, -1).map(total).filter((t) => t > 0);
+  const top = current.spent
+    .filter((g) => !skip.has(g.group.toUpperCase()) && Number(g.total) > 0)
+    .map((g) => ({ label: nice(g.group), total: Number(g.total) }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 3);
+  return {
+    spent: total(current),
+    usual: earlier.length ? earlier.reduce((s, t) => s + t, 0) / earlier.length : null,
+    top,
+  };
+}

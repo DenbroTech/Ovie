@@ -26,6 +26,8 @@ export function FinancesScreen() {
   const [error, setError] = useState<string | null>(null);
   const [trend, setTrend] = useState<TrendMonth[] | null>(null);
   const [asTable, setAsTable] = useState(false);
+  // Rent is the same big number every month and squashes everything else flat, so it's left out unless asked for.
+  const [withRent, setWithRent] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -87,8 +89,18 @@ export function FinancesScreen() {
                   </div>
                   {asTable ? <TrendTable trend={trend} people={data.people.map((p) => p.name)} /> : (
                     <>
-                      <h3 className="chart-title">House spending by category</h3>
-                      {(() => { const s = spendingSeries(trend); return <StackedBars data={s.data} series={s.series} ariaLabel="House spending per month by category" />; })()}
+                      <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'wrap', gap: 'var(--s-2)' }}>
+                        <h3 className="chart-title" style={{ margin: 0 }}>House spending by category</h3>
+                        <div className="chips" role="group" aria-label="Rent">
+                          <button type="button" className="chip-btn plain" aria-pressed={!withRent} onClick={() => setWithRent(false)}>Without rent</button>
+                          <button type="button" className="chip-btn plain" aria-pressed={withRent} onClick={() => setWithRent(true)}>With rent</button>
+                        </div>
+                      </div>
+                      {(() => {
+                        const s = spendingSeries(trend, withRent ? [] : ['RENT']);
+                        return <StackedBars data={s.data} series={s.series} height={260}
+                          ariaLabel={`House spending per month by category${withRent ? '' : ', not counting rent'}`} />;
+                      })()}
                       <h3 className="chart-title">Paid in, by person</h3>
                       {(() => { const s = paidInSeries(trend, data.people.map((p) => p.name)); return <StackedBars data={s.data} series={s.series} mode="grouped" height={180} ariaLabel="Money paid in per month by person" />; })()}
                     </>
