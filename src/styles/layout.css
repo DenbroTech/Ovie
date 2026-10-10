@@ -378,19 +378,31 @@ section + section > .group-label { margin-top: var(--s-5); }
 .ss-top { display: flex; justify-content: space-between; align-items: flex-start; }
 .ss-clock { font-size: 4.4rem; font-weight: 900; line-height: 0.95; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .ss-date { font-size: 1.3rem; font-weight: 700; color: #b9ae9f; margin-top: 2px; }
-.ss-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.ss-card { background: #221f1b; border-radius: 14px; padding: 10px 14px; min-width: 0; }
-.ss-card h3 { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; font-weight: 800; color: #9f9585; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 4px; }
-.ss-line { font-size: 1.05rem; line-height: 1.3; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 1px 0; }
-.ss-note { white-space: nowrap; }
+.ss-slide { flex: 1; min-height: 0; background: #221f1b; border-radius: 18px; padding: 16px 20px; overflow: hidden;
+  display: flex; flex-direction: column; gap: 6px; animation: ss-in 700ms ease both; }
+@keyframes ss-in { from { opacity: 0; transform: translateY(10px); } }
+.ss-slide h3 { display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 800; color: #9f9585; text-transform: uppercase; letter-spacing: 0.05em; margin: 0 0 6px; }
+.ss-slide h3 .ss-who { text-transform: none; letter-spacing: 0; }
+.ss-line { font-size: 1.2rem; line-height: 1.35; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin: 1px 0; }
+.ss-row { display: flex; align-items: baseline; gap: 12px; font-size: 1.3rem; font-weight: 700; margin: 3px 0; min-width: 0; }
+.ss-row-text { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-ep { color: #c7a7d9; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ss-sub { font-size: 0.85rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #8a8174; margin-top: 6px; }
+.ss-days { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 18px; }
+.ss-day-label { font-size: 0.95rem; font-weight: 800; color: #8fb396; margin-bottom: 2px; }
+.ss-note-card { background: #2e2a25; border-radius: 12px; padding: 8px 12px; }
+.ss-note-body { font-size: 1.2rem; font-weight: 700; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ss-shoplist { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 24px; font-size: 1.2rem; font-weight: 700; }
+.ss-shoplist li { break-inside: avoid; padding: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ss-shoplist li::before { content: ''; display: inline-block; width: 10px; height: 10px; border-radius: 3px; border: 2px solid #8a8174; margin-right: 10px; }
+.ss-big-quiet { font-size: 1.3rem; color: #8a8174; font-weight: 700; }
+.ss-dots { display: flex; justify-content: center; gap: 8px; }
+.ss-dots i { width: 8px; height: 8px; border-radius: 50%; background: #3a352f; }
+.ss-dots i.on { background: #efe7da; }
 .ss-when { color: #8fb396; margin-right: 8px; font-variant-numeric: tabular-nums; }
 .ss-who { color: #9f9585; font-weight: 600; }
-.ss-late { color: #e7a07c; }
-.ss-quiet { color: #8a8174; font-weight: 600; font-size: 1.05rem; }
-.ss-shop { display: flex; align-items: center; gap: 6px; color: #d9cfbf; margin-top: 6px; }
-.ss-chart { flex: 1; min-height: 150px; display: flex; flex-direction: column; }
-.ss-chart .chart { flex: 1; min-height: 0; }
-.ss-chart .chart-svg { height: 100%; max-height: 100%; }
+.ss-late, .ss-late .ss-when { color: #e7a07c; }
+.ss-chart { flex: 1; min-height: 0; display: flex; flex-direction: column; justify-content: center; }
 .ss .chart-axis { fill: #9f9585; }
 .ss .chart-total { fill: #efe7da; }
 .ss .chart-grid, .ss .chart-baseline { stroke: #3a352f; }
@@ -400,7 +412,7 @@ section + section > .group-label { margin-top: var(--s-5); }
 }
 @media (max-width: 700px), (orientation: portrait) {
   .ss { grid-template-columns: 1fr; grid-template-rows: 35% 1fr; }
-  .ss-grid { grid-template-columns: 1fr; }
   .ss-clock { font-size: 3.6rem; }
-  .ss-chart { display: none; }
+  .ss-days, .ss-shoplist { grid-template-columns: 1fr; columns: 1; }
 }
+@media (prefers-reduced-motion: reduce) { .ss-slide { animation: none; } }
