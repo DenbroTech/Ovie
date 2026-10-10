@@ -7,8 +7,8 @@ const KEY = 'ovie-frame';
 export const FRAME_EVENT = 'ovie-frame-changed';
 export const FRAME_STEP = 4;
 export const FRAME_MAX = 200;
-/** Our frame hides the left edge up to about where Ovie's right ear sits on the home screen. */
-export const DEFAULT_FRAME: FrameInsets = { left: 88, right: 0, top: 0, bottom: 0 };
+/** Our frame hides the left edge up to about where Ovie's right ear sits on the home screen, and a sliver on the right. */
+export const DEFAULT_FRAME: FrameInsets = { left: 88, right: 16, top: 0, bottom: 0 };
 
 const clamp = (n: unknown) => Math.min(FRAME_MAX, Math.max(0, Math.round(Number(n) || 0)));
 
