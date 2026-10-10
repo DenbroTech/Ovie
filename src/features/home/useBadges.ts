@@ -23,9 +23,14 @@ export function useBadges(householdId: string | undefined, timeZone: string | un
     const occ = expandEvents((r.data ?? []) as Array<EventLike & { title: string }>, today, today);
     return { data: occ.map((o) => ({ title: o.event.title, allDay: o.event.all_day, start: o.start.toISOString() })), error: null };
   });
+  const notes = useLive<number>('badge-notes', householdId, ['notes'], async () => {
+    const r = await supabase.from('notes').select('id', { count: 'exact', head: true })
+      .eq('household_id', householdId!).is('done_at', null);
+    return { data: r.count ?? 0, error: r.error };
+  });
   const todayEvents = events.data ?? [];
   return {
-    counts: { tasks: tasks.data ?? 0, shopping: shopping.data ?? 0, calendar: todayEvents.length } as Record<string, number>,
+    counts: { tasks: tasks.data ?? 0, shopping: shopping.data ?? 0, calendar: todayEvents.length, notes: notes.data ?? 0 } as Record<string, number>,
     todayEvents,
   };
 }

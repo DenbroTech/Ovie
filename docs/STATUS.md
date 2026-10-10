@@ -21,15 +21,22 @@
 - **Watch:** shows and films. Progress kept separately for "together" and for each person. One-tap "Watched S1 E5", undo, tap episodes to correct them, mark a whole season. No episode descriptions, so no spoilers.
 - **Finances:** read-only from ₲ryd: this month's house spending by category, what each person paid in (with their share), and recent transactions. Earlier months are one tap away.
 
+- **Notes:** sticky notes for one person or everyone, in five colours. Pin one to the top, or tick it off the board (kept 30 days).
+- **Photos:** upload several at once from a phone or PC. They're shrunk to 1600px before upload and stored privately in the `ovie-photos` bucket (only paired devices can see them).
+- **Alarms:** time + days (or just once) + who. When one goes off, Ovie takes over the screen with a flashing, wiggling alarm and beeps. Stop or Snooze (9 min) on any device stops it on all of them. It rings on wall screens, plus the phones of the person it's for (while Ovie is open).
+- **Screensaver:** after N minutes without a touch (Settings → This device; wall screens default to 2 minutes, phones off). Left third: a photo slideshow. Right two-thirds: clock, today's events, jobs due, up next to watch, shopping count, notes and a 6-month house spending chart. Tap to come back.
+- **Finance charts:** house spending by category over the last 6 months, and money paid in per person, with tap/hover values and a table view. House money only (decided 2026-10-10); ₲ryd's personal charts are not shown.
+
 ## Known limits
 
 - Editing a repeating calendar event changes every repeat (no "just this one" yet).
 - Removing a person deletes their individual viewing history (their "together" history stays).
 - Finances refreshes every 5 minutes while open (₲ryd changes don't push live to Ovie).
+- Alarm sound: browsers only allow sound after someone has touched the page once. On the Pi kiosk, Chromium will be started with autoplay allowed so alarms always beep. Alarms only ring on devices that have Ovie open.
 
 ## Next
 
-Your redesign pass, then: screensaver, Pi kiosk setup, notes, meals, reminders.
+Your redesign pass, then the Pi kiosk setup.
 
 ## Later
 

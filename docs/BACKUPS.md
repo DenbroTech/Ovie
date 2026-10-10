@@ -43,7 +43,8 @@ What it does, in order:
 1. Lists everything inside the file and **refuses** if anything is outside the `ovie` schema, so it cannot change ₲ryd.
 2. Asks you to type `RESTORE`.
 3. Replaces Ovie's tables, data, functions and policies in **one transaction**. If anything fails, nothing changes.
-4. Re-enables live sync for Ovie's tables (`scripts\restore-fixups.sql`).
+4. Re-enables live sync for Ovie's tables and puts back the photo permissions (`scripts\restore-pre.sql` sets them aside first, `scripts\restore-fixups.sql` restores them).
+- Photo **files** live in Supabase Storage, not in the database, so they aren't in this backup. Keep your originals on your phone or PC.
 
 Limits:
 - Restore into the same version of Ovie the backup came from. If newer Ovie tables exist that are not in the backup, the restore stops safely and changes nothing.

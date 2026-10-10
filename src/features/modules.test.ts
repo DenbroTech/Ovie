@@ -1,6 +1,7 @@
 import { groupOpen, sortOpen, type Task } from './tasks/Tasks';
 import { buyAgain, type Item } from './shopping/Shopping';
 import { nice } from './finances/Finances';
+import { sortNotes, type Note } from './notes/Notes';
 
 vi.mock('../lib/supabase', () => ({ supabase: {}, configError: null }));
 
@@ -48,5 +49,17 @@ describe('finances', () => {
     expect(nice('GROCERIES')).toBe('Groceries');
     expect(nice('Groceries')).toBe('Groceries');
     expect(nice(null)).toBe('');
+  });
+});
+
+describe('notes', () => {
+  const note = (over: Partial<Note>): Note => ({ id: Math.random().toString(36), body: 'x', from_member: null, to_member: null, colour: 'sand', pinned: false, done_at: null, created_at: '2026-10-01T00:00:00Z', ...over });
+  it('shows pinned notes first, then newest', () => {
+    const sorted = sortNotes([
+      note({ body: 'old', created_at: '2026-10-01T00:00:00Z' }),
+      note({ body: 'new', created_at: '2026-10-09T00:00:00Z' }),
+      note({ body: 'pinned', pinned: true, created_at: '2026-09-01T00:00:00Z' }),
+    ]);
+    expect(sorted.map((n) => n.body)).toEqual(['pinned', 'new', 'old']);
   });
 });
