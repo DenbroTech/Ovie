@@ -7,6 +7,7 @@ import { useLive } from '../../lib/live';
 import { usePhotos } from '../../lib/photos';
 import { formatClock, formatLongDate } from '../../lib/time';
 import { addDays, countdowns, daysBetween, expandEvents, money, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
+import { notesForWall, postitColour, postitTilt } from '../../lib/postits';
 import { moneyGlance, type TrendMonth } from '../../lib/financeChart';
 
 // ---------- when to show ----------
@@ -52,7 +53,7 @@ export function useIdle(minutes: number): [boolean, () => void] {
 interface TaskLite { id: string; title: string; due_on: string | null; assignee_id: string | null }
 interface TitleLite { id: string; name: string; seasons: number[]; kind: string; status: string }
 interface ViewLite { title_id: string; member_id: string | null; season: number; episode: number }
-interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean }
+interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean; colour: string; created_at: string }
 interface EventLite extends EventLike { title: string; member_id: string | null; location: string | null }
 interface ItemLite { id: string; name: string; qty: string | null; list_id: string }
 
@@ -105,8 +106,8 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const views = useLive<ViewLite[]>('ss-views', hid, ['viewings'], () =>
     supabase.from('viewings').select('title_id,member_id,season,episode').eq('household_id', hid!).is('member_id', null));
   const notes = useLive<NoteLite[]>('ss-notes', hid, ['notes'], () =>
-    supabase.from('notes').select('id,body,from_member,to_member,pinned').eq('household_id', hid!).is('done_at', null)
-      .order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(4));
+    supabase.from('notes').select('id,body,from_member,to_member,pinned,colour,created_at').eq('household_id', hid!).is('done_at', null)
+      .order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(8));
   const items = useLive<ItemLite[]>('ss-items', hid, ['shopping_items'], () =>
     supabase.from('shopping_items').select('id,name,qty,list_id').eq('household_id', hid!).is('cleared_at', null).is('checked_at', null)
       .order('created_at').limit(14));
@@ -147,10 +148,11 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const laterOcc = week.filter((o) => o.day !== today);
   const jobsNow = (tasks.data ?? []).filter((t) => !t.due_on || t.due_on <= today);
 
+  const wallNotes = notesForWall(notes.data ?? [], now);
   const slides = slidesToShow({
     jobs: jobsNow.length > 0,
     week: laterOcc.length > 0,
-    notes: (notes.data ?? []).length > 0,
+    notes: wallNotes.length > 0,
     shopping: (items.data ?? []).length > 0,
     countdown: counts.length > 0,
     money: hasMoney,
@@ -280,9 +282,14 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
           {slide === 'notes' && (
             <>
               <h3><MessageSquare size={24} /> Notes</h3>
-              {(notes.data ?? []).slice(0, 2).map((n) => (
-                <p key={n.id} className="ss-note">“{n.body}”{name(n.from_member) ? <span className="ss-who"> — {name(n.from_member)}</span> : null}</p>
-              ))}
+              <div className={`ss-postits ss-postits-${wallNotes.length}`}>
+                {wallNotes.map((n) => (
+                  <div key={n.id} className={`postit postit-${postitColour(n.colour)}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
+                    <p className="postit-body">{n.body}</p>
+                    {name(n.from_member) && <p className="postit-from">— {name(n.from_member)}</p>}
+                  </div>
+                ))}
+              </div>
             </>
           )}
           {slide === 'shopping' && (
