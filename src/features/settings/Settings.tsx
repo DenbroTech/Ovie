@@ -89,7 +89,7 @@ export function SettingsScreen() {
   const memberName = (id: string | null) => members.find((m) => m.id === id)?.display_name;
 
   return (
-    <Screen title="Settings">
+    <Screen title="Settings" sheep="settings">
       <div className="settings-grid">
         <section className="card stack" aria-labelledby="dev-h">
           <h2 id="dev-h">This device</h2>

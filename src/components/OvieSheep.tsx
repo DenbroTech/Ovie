@@ -1,67 +1,61 @@
-// Ovie the sheep — mascot and logo. Pure SVG so it is crisp on every screen.
-type Mood = 'happy' | 'sleepy';
+import { useEffect, useState } from 'react';
 
-const FLEECE: Array<[number, number, number]> = [
-  [38, 62, 16], [49, 47, 16], [67, 44, 17], [84, 56, 16],
-  [85, 75, 15], [67, 86, 16], [46, 83, 15], [62, 64, 26],
-];
+// Ovie the sheep — mascot and logo. One picture per mood or app (public/sheep/<mood>.webp).
+export const SHEEP_MOODS = [
+  'happy', 'sad', 'angry', 'excited', 'worried',
+  'sleepy', 'surprised', 'in-love', 'cool', 'silly',
+  'shocked', 'tired', 'thinking', 'celebrating', 'hungry',
+  'working', 'shopping', 'calendar', 'watch', 'photos', 'alarms', 'finances', 'settings',
+] as const;
+export type SheepMood = (typeof SHEEP_MOODS)[number];
+
+export const sheepSrc = (mood: SheepMood) => `${import.meta.env.BASE_URL}sheep/${mood}.webp`;
+
+const REACT_EVENT = 'ovie-sheep-react';
+
+/** Make every "reacting" Ovie on screen show a mood for a moment (e.g. celebrating a ticked-off job). */
+export function reactSheep(mood: SheepMood, ms = 3000) {
+  window.dispatchEvent(new CustomEvent(REACT_EVENT, { detail: { mood, ms } }));
+}
 
 export function OvieSheep({
   size = 96,
   mood = 'happy',
   title = 'Ovie the sheep',
+  reacts = false,
+  className,
 }: {
   size?: number;
-  mood?: Mood;
+  mood?: SheepMood;
   title?: string;
+  /** Follows reactSheep() for a moment, then goes back to `mood`. */
+  reacts?: boolean;
+  className?: string;
 }) {
+  const [reaction, setReaction] = useState<SheepMood | null>(null);
+  useEffect(() => {
+    if (!reacts) return;
+    let timer = 0;
+    const on = (e: Event) => {
+      const { mood: m, ms } = (e as CustomEvent<{ mood: SheepMood; ms: number }>).detail;
+      setReaction(m);
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setReaction(null), ms);
+    };
+    window.addEventListener(REACT_EVENT, on);
+    return () => { window.removeEventListener(REACT_EVENT, on); window.clearTimeout(timer); };
+  }, [reacts]);
+
+  const shown = reaction ?? mood;
   return (
-    <svg
+    <img
+      src={sheepSrc(shown)}
       width={size}
       height={size}
-      viewBox="0 0 120 120"
-      role="img"
-      aria-label={title}
-      className="ovie-sheep"
-    >
-      <title>{title}</title>
-      {/* legs */}
-      <rect x="47" y="92" width="8" height="15" rx="4" fill="var(--sheep-face, #3b332c)" />
-      <rect x="65" y="92" width="8" height="15" rx="4" fill="var(--sheep-face, #3b332c)" />
-      {/* fleece: outline pass, then fill pass so only the outer edge shows */}
-      <g fill="var(--sheep-wool-edge, #e3d9c8)">
-        {FLEECE.map(([cx, cy, r], i) => <circle key={`o${i}`} cx={cx} cy={cy} r={r + 2.2} />)}
-      </g>
-      <g fill="var(--sheep-wool, #fffaf1)">
-        {FLEECE.map(([cx, cy, r], i) => <circle key={`f${i}`} cx={cx} cy={cy} r={r} />)}
-      </g>
-      {/* ears */}
-      <ellipse cx="41" cy="64" rx="9" ry="5" transform="rotate(-20 41 64)" fill="var(--sheep-face, #3b332c)" />
-      <ellipse cx="79" cy="64" rx="9" ry="5" transform="rotate(20 79 64)" fill="var(--sheep-face, #3b332c)" />
-      {/* face */}
-      <ellipse cx="60" cy="72" rx="15" ry="18" fill="var(--sheep-face, #3b332c)" />
-      {/* tuft */}
-      <g fill="var(--sheep-wool, #fffaf1)">
-        <circle cx="53" cy="55" r="7" />
-        <circle cx="61" cy="52" r="8" />
-        <circle cx="68" cy="56" r="6" />
-      </g>
-      {mood === 'happy' ? (
-        <g>
-          <circle cx="54" cy="70" r="4.2" fill="#fff" />
-          <circle cx="66" cy="70" r="4.2" fill="#fff" />
-          <circle cx="54.8" cy="70.8" r="2.3" fill="#1d1813" />
-          <circle cx="66.8" cy="70.8" r="2.3" fill="#1d1813" />
-        </g>
-      ) : (
-        <g stroke="#fff" strokeWidth="2" strokeLinecap="round" fill="none">
-          <path d="M50.5 71 q3.5 2.5 7 0" />
-          <path d="M62.5 71 q3.5 2.5 7 0" />
-        </g>
-      )}
-      <circle cx="49.5" cy="79" r="3" fill="#e89a8c" opacity="0.55" />
-      <circle cx="70.5" cy="79" r="3" fill="#e89a8c" opacity="0.55" />
-      <path d="M56 82.5 q4 3 8 0" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" fill="none" />
-    </svg>
+      alt={title}
+      draggable={false}
+      className={`ovie-sheep${reaction ? ' ovie-sheep-pop' : ''}${className ? ` ${className}` : ''}`}
+      key={shown}
+    />
   );
 }

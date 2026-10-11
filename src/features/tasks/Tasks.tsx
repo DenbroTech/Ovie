@@ -5,6 +5,7 @@ import { Sheet } from '../../components/Sheet';
 import { PersonPicker, WhoBadge } from '../../components/PersonPicker';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Empty, LoadError, Spinner } from '../../components/States';
+import { reactSheep } from '../../components/OvieSheep';
 import { useToast } from '../../components/Toast';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { useConnection } from '../../app/ConnectionProvider';
@@ -102,6 +103,7 @@ export function TasksScreen() {
     const { data: next, error } = await supabase.rpc('complete_task', { p_task_id: t.id, p_by: me?.id ?? null });
     setBusyId(null);
     if (error) { toast(friendlyError(error), 'error'); void live.reload(); return; }
+    reactSheep('celebrating');
     toast(next ? `Done. Next one is ${t.repeat_unit === 'day' && t.repeat_every === 1 ? 'tomorrow' : 'scheduled'}.` : 'Done');
     void live.reload();
   }
@@ -115,7 +117,7 @@ export function TasksScreen() {
   }
 
   return (
-    <Screen title="Tasks" actions={
+    <Screen title="Tasks" sheep="working" actions={
       <button type="button" className="btn btn-primary btn-icon" aria-label="New task" onClick={() => setEditing('new')} disabled={!online}>
         <Plus size={26} />
       </button>
@@ -148,7 +150,7 @@ export function TasksScreen() {
         {live.error ? <LoadError message={live.error} onRetry={() => void live.reload()} />
           : live.loading ? <Spinner />
           : view === 'todo' ? (
-            open.length === 0 ? <Empty title="Nothing to do!">Add a task above, or tap + for dates and repeats.</Empty> : (
+            open.length === 0 ? <Empty title="Nothing to do!" mood="cool">Add a task above, or tap + for dates and repeats.</Empty> : (
               groupOpen(open, today).map((g) => (
                 <section key={g.label}>
                   <h3 className="group-label">{g.label}</h3>

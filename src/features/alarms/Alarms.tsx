@@ -59,7 +59,7 @@ export function AlarmsScreen() {
   }
 
   return (
-    <Screen title="Alarms" actions={
+    <Screen title="Alarms" sheep="alarms" actions={
       <button type="button" className="btn btn-primary btn-icon" aria-label="New alarm" disabled={!online} onClick={() => setEditing('new')}>
         <Plus size={26} />
       </button>
@@ -244,7 +244,7 @@ export function AlarmRinger() {
     <div className="alarm-ring" role="alertdialog" aria-modal="true" aria-label={`Alarm: ${top.label}`}>
       <div className="alarm-flash" aria-hidden="true" />
       <div className="alarm-content">
-        <div className="alarm-sheep"><OvieSheep size={140} /></div>
+        <div className="alarm-sheep"><OvieSheep size={150} mood="shocked" /></div>
         <AlarmClock size={56} className="alarm-icon" aria-hidden="true" />
         <div className="alarm-clock">{hhmm(top.at_time)}</div>
         <div className="alarm-label">{top.label}</div>
