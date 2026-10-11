@@ -72,30 +72,21 @@ describe('screensaver slides', () => {
   });
 });
 
-import { moneyStatus, monthFraction } from './screensaver/Screensaver';
-import { moneyGlance } from '../lib/financeChart';
+import { finishedMonths } from '../lib/financeChart';
 import { countdowns } from '../lib/dates';
-describe('screensaver: money in plain words', () => {
+describe('screensaver: money month by month', () => {
   const trend = [
+    { month: '2026-07-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 500 }], paid_in: [] },
     { month: '2026-08-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 600 }, { group: 'BILLS', total: 200 }], paid_in: [] },
-    { month: '2026-09-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 800 }, { group: 'BILLS', total: 200 }], paid_in: [] },
-    { month: '2026-10-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 310 }, { group: 'SHOP', total: 40 }], paid_in: [] },
+    { month: '2026-09-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 650 }, { group: 'BILLS', total: 100 }], paid_in: [] },
+    { month: '2026-10-01', spent: [{ group: 'GROCERIES', total: 50 }], paid_in: [] },
   ];
-  it('leaves rent out, compares with a usual month and lists the biggest categories', () => {
-    const g = moneyGlance(trend, ['RENT'])!;
-    expect(g.spent).toBe(350);
-    expect(g.usual).toBe(900);
-    expect(g.top.map((t) => t.label)).toEqual(['Groceries', 'Shop']);
+  it('finished months only, rent left out, with the change from the month before', () => {
+    const m = finishedMonths(trend, ['RENT'], '2026-10-11');
+    expect(m.map((x) => [x.month, x.total, x.change])).toEqual([['2026-07-01', 500, null], ['2026-08-01', 800, 300], ['2026-09-01', 750, -50]]);
   });
-  it('says on track, faster than usual, or over', () => {
-    expect(moneyStatus(300, 900, 0.5)?.tone).toBe('good');
-    expect(moneyStatus(700, 900, 0.5)?.tone).toBe('warn');
-    expect(moneyStatus(950, 900, 0.9)).toEqual({ text: expect.stringMatching(/50 more than a usual month/), tone: 'over' });
-    expect(moneyStatus(100, null, 0.5)).toBeNull();
-  });
-  it('knows how far through the month it is', () => {
-    expect(monthFraction('2026-10-31')).toBe(1);
-    expect(monthFraction('2026-02-14')).toBe(0.5);
+  it('keeps the most recent few', () => {
+    expect(finishedMonths(trend, ['RENT'], '2026-10-11', 2).map((x) => x.month)).toEqual(['2026-08-01', '2026-09-01']);
   });
 });
 
