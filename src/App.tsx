@@ -16,7 +16,7 @@ function ErrorPage({ message, onRetry }: { message: string; onRetry: () => void 
   return (
     <div className="center-page">
       <OfflineBanner />
-      <OvieSheep size={96} mood="sleepy" />
+      <OvieSheep size={96} mood="sad" />
       <div className="notice notice-error" role="alert" style={{ maxWidth: 560 }}>{message}</div>
       <button className="btn btn-primary" onClick={onRetry}>Try again</button>
     </div>
@@ -49,7 +49,7 @@ export default function App() {
   if (configError) {
     return (
       <div className="center-page">
-        <OvieSheep size={96} mood="sleepy" />
+        <OvieSheep size={96} mood="sad" />
         <div className="notice notice-error" role="alert" style={{ maxWidth: 560 }}>{configError}</div>
       </div>
     );

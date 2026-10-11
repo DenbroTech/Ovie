@@ -89,7 +89,7 @@ export function WatchScreen() {
 
   const error = titles.error ?? views.error;
   return (
-    <Screen title="Watch" actions={
+    <Screen title="Watch" sheep="watch" actions={
       <button type="button" className="btn btn-primary btn-icon" aria-label="Add a show or film" disabled={!online} onClick={() => setAdding(true)}>
         <Plus size={26} />
       </button>

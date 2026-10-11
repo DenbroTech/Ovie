@@ -48,7 +48,7 @@ export function FinancesScreen() {
   const max = Math.max(1, ...(data?.by_group.map((g) => Number(g.total)) ?? [1]));
 
   return (
-    <Screen title="Finances">
+    <Screen title="Finances" sheep="finances">
       <div className="module">
         <div className="month-head">
           <button type="button" className="btn btn-ghost btn-icon" aria-label="Previous month" onClick={() => shift(-1)}><ChevronLeft size={26} /></button>

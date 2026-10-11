@@ -63,7 +63,7 @@ export function CalendarScreen() {
   };
 
   return (
-    <Screen title="Calendar" actions={
+    <Screen title="Calendar" sheep="calendar" actions={
       <button type="button" className="btn btn-primary btn-icon" aria-label="New event" disabled={!online}
         onClick={() => setEditing({ newOn: view === 'month' ? selected : today })}>
         <Plus size={26} />

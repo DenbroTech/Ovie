@@ -5,6 +5,7 @@ import { Screen } from '../../components/Screen';
 import { Sheet } from '../../components/Sheet';
 import { PersonPicker } from '../../components/PersonPicker';
 import { Empty, LoadError, Spinner } from '../../components/States';
+import { notesMood } from '../../lib/moods';
 import { useToast } from '../../components/Toast';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { useConnection } from '../../app/ConnectionProvider';
@@ -70,7 +71,7 @@ export function NotesScreen() {
 
   const list = showDone ? done : open;
   return (
-    <Screen title="Notes" actions={
+    <Screen title="Notes" sheep={notesMood(open, me?.id ?? null)} actions={
       <button type="button" className="btn btn-primary btn-icon" aria-label="Write a note" disabled={!online} onClick={() => setWriting(true)}>
         <Plus size={26} />
       </button>

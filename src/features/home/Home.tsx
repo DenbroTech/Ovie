@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { OvieSheep } from '../../components/OvieSheep';
+import { OvieSheep, reactSheep } from '../../components/OvieSheep';
+import { isNight, storedNight } from '../../app/theme';
+import { dayMood } from '../../lib/moods';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { APPS } from '../../app/apps';
 import { formatClock, formatLongDate, greetingFor } from '../../lib/time';
@@ -31,7 +33,9 @@ export function Home() {
         </div>
         <TodayPanel events={todayEvents} tasks={badges.tasks} shopping={badges.shopping} timeZone={tz} />
         <div className="home-hello">
-          <OvieSheep size={84} />
+          <button type="button" className="sheep-btn" aria-label="Say hi to Ovie" onClick={() => reactSheep('silly', 2500)}>
+            <OvieSheep size={84} reacts mood={dayMood({ night: isNight(now, { ...storedNight(), timeZone: tz }), todayTitles: todayEvents.map((e) => e.title) })} />
+          </button>
           <div>
             <p className="hello-line">{greetingFor(now, tz)}{name}!</p>
             <p className="muted small">{household?.name}</p>

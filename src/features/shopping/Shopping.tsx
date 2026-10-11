@@ -4,6 +4,7 @@ import { Screen } from '../../components/Screen';
 import { Sheet } from '../../components/Sheet';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Empty, LoadError, Spinner } from '../../components/States';
+import { shoppingMood } from '../../lib/moods';
 import { useToast } from '../../components/Toast';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { useConnection } from '../../app/ConnectionProvider';
@@ -117,7 +118,7 @@ export function ShoppingScreen() {
 
   const error = lists.error ?? items.error;
   return (
-    <Screen title="Shopping" actions={
+    <Screen title="Shopping" sheep={shoppingMood(toBuy.length)} actions={
       <button type="button" className="btn btn-secondary btn-icon" aria-label="New list" disabled={!online} onClick={() => setNewList(true)}>
         <ListPlus size={24} />
       </button>

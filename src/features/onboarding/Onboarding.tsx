@@ -38,7 +38,7 @@ export function SetupHousehold() {
     <div className="center-page">
       <div className="auth-card card stack">
         <div className="auth-hero">
-          <OvieSheep size={112} />
+          <OvieSheep size={112} mood="excited" />
           <h1>Hi, I'm Ovie!</h1>
           <p className="muted">Let's set up your home. This only happens once.</p>
         </div>

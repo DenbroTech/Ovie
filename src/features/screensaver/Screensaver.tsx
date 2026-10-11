@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarDays, Check, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
-import { OvieSheep } from '../../components/OvieSheep';
+import { OvieSheep, reactSheep, type SheepMood } from '../../components/OvieSheep';
+import { isNight, storedNight } from '../../app/theme';
+import { dayMood, notesMood, shoppingMood } from '../../lib/moods';
 import { useHousehold } from '../../app/HouseholdProvider';
 import { supabase } from '../../lib/supabase';
 import { useLive } from '../../lib/live';
@@ -190,6 +192,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     if (doneIds.includes(t.id)) { e.stopPropagation(); return; }
     tapped(e, t.id);
     const { error } = await supabase.rpc('complete_task', { p_task_id: t.id, p_by: null });
+    if (!error) reactSheep('celebrating');
     settle(!error, t.id, () => void tasks.reload());
   }
   async function watchedIt(e: React.MouseEvent) {
@@ -204,9 +207,18 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
       if (finished) await supabase.from('titles').update({ status: 'done' }).eq('id', t.id);
       else if (t.status !== 'watching') await supabase.from('titles').update({ status: 'watching' }).eq('id', t.id);
     }
+    if (!error) reactSheep('celebrating');
     settle(!error, t.id, () => { void views.reload(); void titles.reload(); });
   }
   const current = pics.length ? pics[photoIdx % pics.length] : null;
+  // Ovie in the corner matches what's showing (and sleeps at night).
+  const night = isNight(now, { ...storedNight(), timeZone: tz });
+  const baseMood = dayMood({ night, todayTitles: todayOcc.map((o) => o.event.title) });
+  const cornerMood: SheepMood = night && baseMood === 'sleepy' ? 'sleepy' : ({
+    today: baseMood, jobs: 'working', countdown: 'excited', week: 'calendar',
+    notes: notesMood(notes.data ?? [], null, now), shopping: shoppingMood((items.data ?? []).length),
+    money: 'finances', watch: 'watch',
+  } as Record<SlideId, SheepMood>)[slide];
   const shortDay = (day: string) => daysBetween(today, day) === 1 ? 'Tomorrow' : parseIso(day).toLocaleDateString(undefined, { weekday: 'short' });
   const fmtTime = (d: Date) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: tz }).format(d);
 
@@ -219,7 +231,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
             <img key={p.id} src={photos.urls[p.path]} alt="" className={i === photoIdx % pics.length ? 'on' : ''} />
           ))
         ) : (
-          <div className="ss-nophoto"><OvieSheep size={150} mood="sleepy" /><p>Add photos in the Photos app</p></div>
+          <div className="ss-nophoto"><OvieSheep size={150} mood="photos" /><p>Add photos in the Photos app</p></div>
         )}
       </div>
 
@@ -229,7 +241,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
             <div className="ss-clock">{formatClock(now, tz)}</div>
             <div className="ss-date">{formatLongDate(now, tz)}</div>
           </div>
-          <OvieSheep size={72} />
+          <OvieSheep size={84} reacts mood={cornerMood} />
         </div>
 
         {/* One topic at a time, in big type */}

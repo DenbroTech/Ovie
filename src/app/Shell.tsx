@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
+import { OvieSheep } from '../components/OvieSheep';
 import { Home } from '../features/home/Home';
 import { APPS } from './apps';
 import { useConnection } from './ConnectionProvider';
@@ -22,7 +23,7 @@ export function OfflineBanner() {
   if (online) return null;
   return (
     <div className="offline-banner" role="status">
-      <WifiOff size={18} /> Offline — reconnecting… Changes are paused until Ovie is back online.
+      <OvieSheep size={34} mood="sad" title="" /><WifiOff size={18} /> Offline — reconnecting… Changes are paused until Ovie is back online.
     </div>
   );
 }

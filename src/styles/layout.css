@@ -499,3 +499,15 @@ section + section > .group-label { margin-top: var(--s-5); }
 .release-box legend { font-weight: 800; padding: 0 var(--s-2); }
 .release-box .field-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.7fr); }
 .release-box .field, .release-box input { min-width: 0; width: 100%; }
+
+/* Ovie the sheep */
+.ovie-sheep { display: block; object-fit: contain; user-select: none; -webkit-user-drag: none; flex: none; }
+.ovie-sheep-pop { animation: sheep-pop 420ms cubic-bezier(.3, 1.6, .5, 1) both; }
+@keyframes sheep-pop { from { transform: scale(0.7) rotate(-8deg); } to { transform: none; } }
+.screen-title { display: flex; align-items: center; gap: var(--s-3); min-width: 0; }
+.screen-sheep { margin: -8px 0; }
+:root[data-device='wall'] .screen-sheep { width: 68px; height: 68px; }
+.sheep-btn { background: none; border: 0; padding: 0; cursor: pointer; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
+.sheep-btn:active .ovie-sheep { transform: scale(0.94); }
+.offline-banner .ovie-sheep { margin: -6px 0; }
+@media (prefers-reduced-motion: reduce) { .ovie-sheep-pop { animation: none; } }
