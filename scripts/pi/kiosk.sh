@@ -60,6 +60,7 @@ while [ ! -f "$FLAG" ]; do
     --check-for-update-interval=31536000 \
     --password-store=basic \
     --ozone-platform-hint=auto \
+    --touch-events=enabled \
     >>"$LOG" 2>&1 9>&-
   [ -f "$FLAG" ] && break
   echo "$(date) Chromium closed; restarting in 3s" >>"$LOG"

@@ -47,7 +47,7 @@ export function FitToWall({ photo, src, onClose, onSaved }: { photo: Photo; src:
       footer={<button type="button" className="btn btn-secondary" disabled={busy} onClick={() => void save(null)}>Reset</button>}>
       <p className="muted small">The bright window is what the wall screen shows. Drag it to move it, drag its corner to make it bigger or smaller.</p>
       <div className="fit-stage">
-        <div ref={frame} className="fit-frame" style={{ aspectRatio: `${iw} / ${ih}`, width: `min(100%, calc(58dvh * ${iw / ih}))` }} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
+        <div ref={frame} className="fit-frame" data-no-drag-scroll style={{ aspectRatio: `${iw} / ${ih}`, width: `min(100%, calc(58dvh * ${iw / ih}))` }} onPointerMove={move} onPointerUp={end} onPointerCancel={end}>
           <img src={src} alt="" draggable={false} />
           <div className="fit-window" style={{ left: pct(crop.x), top: pct(crop.y), width: pct(crop.w), height: pct(crop.h) }}
             onPointerDown={(e) => begin('move', e)} role="presentation">
