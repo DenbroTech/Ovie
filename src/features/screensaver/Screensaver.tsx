@@ -304,7 +304,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               <h3><ShoppingCart size={24} /> To buy{(items.data ?? []).length > 6 ? ` · ${(items.data ?? []).length}` : ''}</h3>
               <FitText className="ss-fit" max={48} min={22}>
               <ul className="ss-shoplist">
-                {(items.data ?? []).slice(0, 6).map((i) => <li key={i.id}>{i.name}</li>)}
+                {(items.data ?? []).slice(0, 6).map((i) => <li key={i.id}><span>{i.name}</span></li>)}
               </ul>
               </FitText>
             </>

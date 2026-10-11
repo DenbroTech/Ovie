@@ -11,7 +11,14 @@ export function FitText({ children, max, min, className, onFit }: {
   useLayoutEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const fits = () => el.scrollHeight <= el.clientHeight + 1 && el.scrollWidth <= el.clientWidth + 1;
+    // Fits = nothing spills out of the box, and no line inside spills sideways out of its own column or item.
+    const fits = () => {
+      if (el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1) return false;
+      for (const child of el.querySelectorAll<HTMLElement>('*')) {
+        if (child.clientWidth > 0 && child.scrollWidth > child.clientWidth + 1) return false;
+      }
+      return true;
+    };
     const fit = () => {
       if (!el.clientHeight) return;
       let lo = min, hi = max;
