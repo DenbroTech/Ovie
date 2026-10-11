@@ -12,7 +12,7 @@ describe('navigation', () => {
   });
 
   it('only lists apps that exist (no dead buttons)', () => {
-    expect(APPS.map((a) => a.id)).toEqual(['tasks', 'shopping', 'calendar', 'notes', 'watch', 'photos', 'alarms', 'finances', 'settings']);
+    expect(APPS.map((a) => a.id)).toEqual(['tasks', 'shopping', 'calendar', 'notes', 'watch', 'menu', 'alarms', 'finances', 'settings']);
   });
 });
 

@@ -3,7 +3,7 @@ import { useLocation, Routes, Route, Navigate } from 'react-router-dom';
 import { WifiOff } from 'lucide-react';
 import { OvieSheep } from '../components/OvieSheep';
 import { Home } from '../features/home/Home';
-import { APPS } from './apps';
+import { APPS, MORE_SCREENS } from './apps';
 import { useConnection } from './ConnectionProvider';
 import { useHousehold } from './HouseholdProvider';
 import { AlarmRinger } from '../features/alarms/Alarms';
@@ -62,7 +62,7 @@ export function Shell() {
       <div key={location.pathname} className={`page slide-${dir}`}>
         <Routes location={location}>
           <Route path="/" element={<Home />} />
-          {APPS.map((app) => (
+          {[...APPS, ...MORE_SCREENS].map((app) => (
             <Route key={app.id} path={`${app.path}/*`} element={<app.Screen />} />
           ))}
           <Route path="*" element={<Navigate to="/" replace />} />

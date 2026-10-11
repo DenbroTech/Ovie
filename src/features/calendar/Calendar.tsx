@@ -1,3 +1,4 @@
+import { eventWhenLabel } from '../../lib/menu';
 import { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Trash2 } from 'lucide-react';
 import { Screen } from '../../components/Screen';
@@ -24,9 +25,10 @@ export interface CalEvent {
   all_day: boolean;
   member_id: string | null;
   repeat: EventRepeat;
+  meal_id: string | null;
 }
 
-const COLS = 'id,title,notes,location,starts_at,ends_at,all_day,member_id,repeat';
+const COLS = 'id,title,notes,location,starts_at,ends_at,all_day,member_id,repeat,meal_id';
 const REPEAT_LABEL: Record<EventRepeat, string> = { none: 'Does not repeat', weekly: 'Every week', monthly: 'Every month', yearly: 'Every year' };
 
 type View = 'agenda' | 'month';
@@ -139,7 +141,7 @@ function EventRow({ occ, who, onOpen }: { occ: Occurrence<CalEvent>; who: Member
   const e = occ.event;
   return (
     <li className="row-item">
-      <span className="event-time">{e.all_day ? 'All day' : timeLabel(occ.start)}</span>
+      <span className="event-time">{eventWhenLabel(e, () => timeLabel(occ.start))}</span>
       <button type="button" className="row-main" onClick={onOpen}>
         <span className="row-title">{e.title}</span>
         {(e.location || e.repeat !== 'none' || (!e.all_day && occ.end)) && (

@@ -5,7 +5,7 @@ import { OvieSheep, type SheepMood } from './OvieSheep';
 
 /** A full-screen "app" page with a big back button to Home. */
 /** `sheep` is this app's Ovie, shown by the title (it reacts to things happening, e.g. celebrating a ticked-off job). */
-export function Screen({ title, sheep, children, actions }: { title: string; sheep?: SheepMood; children: ReactNode; actions?: ReactNode }) {
+export function Screen({ title, sheep, children, actions, back = '/' }: { title: string; sheep?: SheepMood; children: ReactNode; actions?: ReactNode; back?: string }) {
   const navigate = useNavigate();
   return (
     <div className="screen">
@@ -13,8 +13,8 @@ export function Screen({ title, sheep, children, actions }: { title: string; she
         <button
           type="button"
           className="btn btn-ghost btn-icon screen-back"
-          onClick={() => navigate('/', { state: { dir: 'back' } })}
-          aria-label="Back to home"
+          onClick={() => navigate(back, { state: { dir: 'back' } })}
+          aria-label={back === '/' ? 'Back to home' : 'Back'}
         >
           <ChevronLeft size={30} strokeWidth={2.5} />
         </button>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Copy, Laptop, Minus, Monitor, Pencil, Plus, Power, RefreshCw, RotateCcw, Smartphone, Trash2, UserPlus, Unlink } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Copy, Image as ImageIcon, Laptop, Minus, Monitor, Pencil, Plus, Power, RefreshCw, RotateCcw, Smartphone, Trash2, UserPlus, Unlink } from 'lucide-react';
 import { Screen } from '../../components/Screen';
 import { Avatar } from '../../components/Avatar';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -132,6 +133,7 @@ export function SettingsScreen() {
               {SCREENSAVER_CHOICES.map((n) => <option key={n} value={n}>{n === 0 ? 'Off' : `After ${n} minute${n === 1 ? '' : 's'} of no touching`}</option>)}
             </select>
             <span className="hint">Shows photos and today's info. Tap to come back.</span>
+            <Link to="/photos" state={{ dir: 'forward' }} className="btn btn-secondary"><ImageIcon size={20} /> Screensaver photos</Link>
           </div>
           {thisDevice.kind === 'wall' && <FrameFit />}
           {thisDevice.kind === 'wall' && (
