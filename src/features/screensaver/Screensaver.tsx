@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarDays, Check, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
 import { FitText } from '../../components/FitText';
+import { CroppedPhoto } from '../../components/CroppedPhoto';
 import { OvieSheep, reactSheep, type SheepMood } from '../../components/OvieSheep';
 import { isNight, storedNight } from '../../app/theme';
 import { dayMood, notesMood, shoppingMood } from '../../lib/moods';
@@ -214,7 +215,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
       <div className="ss-photo">
         {current ? (
           pics.map((p, i) => (
-            <img key={p.id} src={photos.urls[p.path]} alt="" className={i === photoIdx % pics.length ? 'on' : ''} />
+            <CroppedPhoto key={p.id} photo={p} src={photos.urls[p.path]} className={`ss-pic${i === photoIdx % pics.length ? ' on' : ''}`} />
           ))
         ) : (
           <div className="ss-nophoto"><OvieSheep size={150} mood="photos" /><p>Add photos in the Photos app</p></div>

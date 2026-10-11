@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { ImagePlus, Trash2 } from 'lucide-react';
+import { Crop as CropIcon, ImagePlus, Trash2 } from 'lucide-react';
+import { FitToWall } from './FitToWall';
 import { Screen } from '../../components/Screen';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
 import { Empty, LoadError, Spinner } from '../../components/States';
@@ -21,6 +22,7 @@ export function PhotosScreen() {
   const [uploading, setUploading] = useState<{ done: number; total: number } | null>(null);
   const [viewing, setViewing] = useState<Photo | null>(null);
   const [confirm, setConfirm] = useState<Photo | null>(null);
+  const [fitting, setFitting] = useState<Photo | null>(null);
 
   async function upload(files: FileList | null) {
     if (!files || files.length === 0 || !hid) return;
@@ -90,9 +92,14 @@ export function PhotosScreen() {
           {photos.urls[viewing.path] && <img src={photos.urls[viewing.path]} alt="" onClick={(e) => e.stopPropagation()} />}
           <div className="photo-viewer-bar" onClick={(e) => e.stopPropagation()}>
             <button type="button" className="btn btn-secondary" onClick={() => setViewing(null)}>Close</button>
+            <button type="button" className="btn btn-secondary" disabled={!online || !photos.urls[viewing.path]} onClick={() => setFitting(viewing)}><CropIcon size={18} /> Fit to wall</button>
             <button type="button" className="btn btn-danger" disabled={!online} onClick={() => setConfirm(viewing)}><Trash2 size={18} /> Delete</button>
           </div>
         </div>
+      )}
+      {fitting && photos.urls[fitting.path] && (
+        <FitToWall photo={fitting} src={photos.urls[fitting.path]} onClose={() => setFitting(null)}
+          onSaved={() => { setFitting(null); setViewing(null); void photos.reload(); }} />
       )}
       {confirm && (
         <ConfirmDialog danger title="Delete this photo?" body="It's removed from Ovie and the screensaver." confirmLabel="Delete"

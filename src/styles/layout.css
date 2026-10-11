@@ -404,11 +404,13 @@ section + section > .group-label { margin-top: var(--s-5); }
    Read from across the room: a big clock, then ONE topic at a time in large type (at most three lines). */
 .ss { position: fixed; inset: 0; z-index: 90; display: grid; grid-template-columns: 1fr 2fr; background: #14120f; color: #efe7da; cursor: none; animation: fade-in 600ms ease both; }
 .ss-photo { position: relative; overflow: hidden; background: #0d0c0a; }
-.ss-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.6s ease; }
-.ss-photo img.on { opacity: 1; }
+.ss-pic { position: absolute; inset: 0; opacity: 0; transition: opacity 1.6s ease; }
+.ss-pic.on { opacity: 1; }
+.cropped-photo { overflow: hidden; }
+.cropped-photo img { position: absolute; max-width: none; }
 /* On the wall the photo runs under the picture frame to the screen's edges, so none of the visible area is wasted. */
 :root[data-device='wall'] .ss-photo { overflow: visible; }
-:root[data-device='wall'] .ss-photo img {
+:root[data-device='wall'] .ss-pic {
   top: calc(-1 * var(--frame-top, 0px)); left: calc(-1 * var(--frame-left, 0px));
   width: calc(100% + var(--frame-left, 0px)); height: calc(100% + var(--frame-top, 0px) + var(--frame-bottom, 0px)); }
 :root[data-device='wall'] .ss-photo::before { content: ''; position: absolute; inset: calc(-1 * var(--frame-top, 0px)) 0 calc(-1 * var(--frame-bottom, 0px)) calc(-1 * var(--frame-left, 0px)); background: #0d0c0a; }
@@ -519,3 +521,13 @@ section + section > .group-label { margin-top: var(--s-5); }
 .sheep-btn:active .ovie-sheep { transform: scale(0.94); }
 .offline-banner .ovie-sheep { margin: -6px 0; }
 @media (prefers-reduced-motion: reduce) { .ovie-sheep-pop { animation: none; } }
+
+/* Photos → Fit to wall */
+.fit-stage { display: grid; place-items: center; }
+.fit-frame { position: relative; touch-action: none; user-select: none; overflow: hidden; border-radius: var(--r-sm, 6px); }
+.fit-frame img { display: block; width: 100%; height: 100%; object-fit: fill; pointer-events: none; }
+.fit-window { position: absolute; box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.55); outline: 3px solid #fff; outline-offset: -1px; cursor: move; touch-action: none; }
+.fit-handle { position: absolute; right: 4px; bottom: 4px; width: 36px; height: 36px; border-radius: 50%; background: #fff; border: 3px solid var(--accent, #6f8f73);
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.4); cursor: nwse-resize; touch-action: none; }
+.photo-viewer-bar { flex-wrap: wrap; justify-content: center; }
+.photo-viewer-bar .btn { white-space: nowrap; }
