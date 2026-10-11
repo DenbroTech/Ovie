@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarDays, Check, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
+import { FitText } from '../../components/FitText';
 import { OvieSheep, reactSheep, type SheepMood } from '../../components/OvieSheep';
 import { isNight, storedNight } from '../../app/theme';
 import { dayMood, notesMood, shoppingMood } from '../../lib/moods';
@@ -11,7 +12,7 @@ import { formatClock, formatLongDate } from '../../lib/time';
 import { addDays, countdowns, daysBetween, expandEvents, money, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
 import { RELEASE_COLS, episodeRelease, nextOutEpisode, upcomingReleases, type ReleaseFields } from '../../lib/releases';
 import { notesForWall, postitColour, postitTilt } from '../../lib/postits';
-import { moneyGlance, type TrendMonth } from '../../lib/financeChart';
+import { finishedMonths, type MonthTotal, type TrendMonth } from '../../lib/financeChart';
 
 // ---------- when to show ----------
 
@@ -70,22 +71,6 @@ export function slidesToShow(has: Partial<Record<Exclude<SlideId, 'today'>, bool
   return ORDER.filter((id) => id === 'today' || has[id as Exclude<SlideId, 'today'>]);
 }
 
-/** How far through the month today is (0–1), for "on track" against a usual month. */
-export function monthFraction(today: string): number {
-  const d = parseIso(today);
-  const days = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
-  return d.getDate() / days;
-}
-
-/** Plain words for the money slide: is this month's spending on track against a usual month? */
-export function moneyStatus(spent: number, usual: number | null, fraction: number): { text: string; tone: 'good' | 'warn' | 'over' } | null {
-  if (!usual) return null;
-  const left = usual - spent;
-  if (left < 0) return { text: `${money(Math.round(-left))} more than a usual month`, tone: 'over' };
-  if (spent <= usual * fraction * 1.1) return { text: `On track · ${money(Math.round(left))} left of a usual month`, tone: 'good' };
-  return { text: `Spending faster than usual · ${money(Math.round(left))} left`, tone: 'warn' };
-}
-
 export function Screensaver({ onWake }: { onWake: () => void }) {
   const { household, members } = useHousehold();
   const hid = household?.id;
@@ -141,9 +126,9 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const ready = (t: TitleLite) => (t.kind === 'film' ? episodeRelease(t, 0, 0, today).out : !!nextFor(t));
   const wantList = (titles.data ?? []).filter((t) => t.status === 'want');
   // Rent dwarfs everything else (and never changes), so the wall leaves it out.
-  const glance = trend && trend.length ? moneyGlance(trend, ['RENT']) : null;
-  const hasMoney = !!glance && (glance.spent > 0 || !!glance.usual);
-  const status = glance ? moneyStatus(glance.spent, glance.usual, monthFraction(today)) : null;
+  // Finished months only (this month is rarely up to date); rent left out, it never changes.
+  const months = trend ? finishedMonths(trend, ['RENT'], today) : [];
+  const hasMoney = months.some((m) => m.total > 0);
   const counts = [
     ...countdowns(events.data ?? [], today).map((c) => ({ id: c.event.id, title: c.event.title, days: c.days })),
     ...upcomingReleases(titles.data ?? [], watchedOf, today),
@@ -174,6 +159,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     return () => window.clearInterval(id);
   }, []);
   const slide = slides[slideIdx % slides.length];
+  const notesRound = slides.includes('notes') ? Math.floor(slideIdx / slides.length) : 0;
 
   // Done buttons right on the screensaver (they don't wake it up).
   const [doneIds, setDoneIds] = useState<string[]>([]);
@@ -249,16 +235,19 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
           {slide === 'today' && (
             <>
               <h3><CalendarDays size={24} /> Today</h3>
+              <FitText className="ss-fit" max={48} min={22}>
               {todayOcc.length === 0 ? <p className="ss-big-quiet">Nothing on today</p> : todayOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id} className="ss-item">
                   <span className="ss-when">{o.event.all_day ? 'All day' : fmtTime(o.start)}</span>{o.event.title}
                 </p>
               ))}
+              </FitText>
             </>
           )}
           {slide === 'jobs' && (
             <>
               <h3><SquareCheckBig size={24} /> Jobs to do{jobsNow.length > 3 ? ` · ${jobsNow.length}` : ''}</h3>
+              <FitText className="ss-fit" max={48} min={22}>
               {jobsNow.slice(0, 3).map((t) => {
                 const done = doneIds.includes(t.id);
                 return (
@@ -273,11 +262,13 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
                 );
               })}
               {failed && <p className="ss-oops">Couldn't save that. Check the internet and try again.</p>}
+              </FitText>
             </>
           )}
           {slide === 'countdown' && (
             <>
               <h3><Hourglass size={24} /> Countdown</h3>
+              <FitText className="ss-fit" max={48} min={22}>
               <div className="ss-counts">
                 {counts.slice(0, 2).map((c) => (
                   <div key={c.id} className="ss-count">
@@ -286,55 +277,49 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
                   </div>
                 ))}
               </div>
+              </FitText>
             </>
           )}
           {slide === 'week' && (
             <>
               <h3><CalendarDays size={24} /> Coming up</h3>
+              <FitText className="ss-fit" max={48} min={22}>
               {laterOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id + o.day} className="ss-item">
                   <span className="ss-when">{shortDay(o.day)}</span>{o.event.title}
                 </p>
               ))}
+              </FitText>
             </>
           )}
           {slide === 'notes' && (
             <>
               <h3><MessageSquare size={24} /> Notes</h3>
-              <div className={`ss-postits ss-postits-${wallNotes.length}`}>
-                {wallNotes.map((n) => (
-                  <div key={n.id} className={`postit postit-${postitColour(n.colour)}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
-                    <p className="postit-body">{n.body}</p>
-                    {name(n.from_member) && <p className="postit-from">— {name(n.from_member)}</p>}
-                  </div>
-                ))}
-              </div>
+              <WallNotes notes={wallNotes} round={notesRound} name={name} />
             </>
           )}
           {slide === 'shopping' && (
             <>
               <h3><ShoppingCart size={24} /> To buy{(items.data ?? []).length > 6 ? ` · ${(items.data ?? []).length}` : ''}</h3>
+              <FitText className="ss-fit" max={48} min={22}>
               <ul className="ss-shoplist">
                 {(items.data ?? []).slice(0, 6).map((i) => <li key={i.id}>{i.name}</li>)}
               </ul>
+              </FitText>
             </>
           )}
-          {slide === 'money' && glance && (
+          {slide === 'money' && hasMoney && (
             <>
-              <h3><Wallet size={24} /> Spent this month <span className="ss-who">· not counting rent</span></h3>
-              <div className="ss-money-big">{money(Math.round(glance.spent))}</div>
-              {glance.usual ? (
-                <div className="ss-meter" aria-hidden="true">
-                  <i className={`tone-${status?.tone ?? 'good'}`} style={{ width: `${Math.min(100, (glance.spent / glance.usual) * 100)}%` }} />
-                  <b style={{ left: `${monthFraction(today) * 100}%` }} />
-                </div>
-              ) : null}
-              {status && <p className={`ss-money-status tone-${status.tone}`}>{status.tone === 'good' ? 'On track' : status.tone === 'warn' ? 'Spending fast' : 'Over a usual month'}</p>}
+              <h3><Wallet size={24} /> House spending <span className="ss-who">· not counting rent</span></h3>
+              <FitText className="ss-fit" max={48} min={22}>
+                <MoneyMonths months={months} />
+              </FitText>
             </>
           )}
           {slide === 'watch' && pick && (
             <>
               <h3><Tv size={24} /> Tonight's pick</h3>
+              <FitText className="ss-fit" max={48} min={22}>
               <div className="ss-pick">
                 <span className="ss-pick-title">{pick.title.name}</span>
                 <span className="ss-pill">{pick.label}</span>
@@ -343,6 +328,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
                 <Check size={32} strokeWidth={3.5} /> {doneIds.includes(pick.title.id) ? 'Nice!' : pick.title.kind === 'film' ? 'Watched it' : `Watched ${pick.label}`}
               </button>
               {failed && <p className="ss-oops">Couldn't save that. Check the internet and try again.</p>}
+              </FitText>
             </>
           )}
         </section>
@@ -352,6 +338,61 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
             {slides.map((s2, i) => <i key={s2} className={i === slideIdx % slides.length ? 'on' : ''} />)}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Sticky notes, as many as fit at a readable size: if a note would be cut off, show fewer at a time
+ *  (the rest take their turn the next time Notes comes round). */
+const NOTE_MIN_PX = 20;
+function WallNotes({ notes, round, name }: {
+  notes: Array<{ id: string; body: string; colour: string; from_member: string | null }>;
+  round: number;
+  name: (id: string | null) => string | undefined;
+}) {
+  const [cap, setCap] = useState(notes.length);
+  const start = notes.length > cap ? (round * cap) % notes.length : 0;
+  const shown = [...notes.slice(start), ...notes.slice(0, start)].slice(0, cap);
+  const onFit = useCallback((fits: boolean) => { if (!fits) setCap((c) => Math.max(1, c - 1)); }, []);
+  const max = shown.length === 1 ? 56 : shown.length === 2 ? 42 : 32;
+  return (
+    <div className={`ss-postits ss-postits-${shown.length}`}>
+      {shown.map((n) => (
+        <div key={n.id} className={`postit postit-${postitColour(n.colour)}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
+          <FitText className="postit-body" max={max} min={NOTE_MIN_PX} onFit={onFit}>{n.body}</FitText>
+          {name(n.from_member) && <p className="postit-from">— {name(n.from_member)}</p>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Last finished month big, with how much it went up or down, then the months before as thick bars. */
+function MoneyMonths({ months }: { months: MonthTotal[] }) {
+  const latest = months[months.length - 1];
+  const max = Math.max(...months.map((m) => m.total), 1);
+  const prev = months.length > 1 ? months[months.length - 2] : null;
+  const change = (c: number | null) => (c === null || Math.round(c) === 0 ? null : c > 0 ? `▲ ${money(Math.round(c))}` : `▼ ${money(Math.round(-c))}`);
+  return (
+    <div className="ss-money">
+      <p className="ss-money-head">
+        <span className="ss-money-month">{latest.longLabel}</span> <span className="ss-money-big">{money(Math.round(latest.total))}</span>
+      </p>
+      {prev && latest.change !== null && (
+        <p className={`ss-money-change ${latest.change > 0 ? 'is-up' : 'is-down'}`}>
+          {change(latest.change) ?? 'Same as'} {latest.change > 0 ? 'more than' : latest.change < 0 ? 'less than' : ''} {prev.longLabel}
+        </p>
+      )}
+      <div className="ss-months" role="table" aria-label="House spending per month, not counting rent">
+        {months.map((m, i) => (
+          <div key={m.month} role="row" className={`ss-month${i === months.length - 1 ? ' is-latest' : ''}`}>
+            <span role="rowheader" className="ss-month-name">{m.label}</span>
+            <span role="cell" className="ss-month-track"><i style={{ width: `${Math.max(2, (m.total / max) * 100)}%` }} /></span>
+            <span role="cell" className="ss-month-total">{money(Math.round(m.total))}</span>
+            <span role="cell" className="ss-month-change">{change(m.change) ?? ''}</span>
+          </div>
+        ))}
       </div>
     </div>
   );
