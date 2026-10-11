@@ -26,7 +26,7 @@ describe('Home', () => {
 
   it('shows all apps with live counts, and no badge when nothing is waiting', () => {
     render(<MemoryRouter><Home /></MemoryRouter>);
-    for (const name of ['Tasks', 'Shopping', 'Calendar', 'Notes', 'Watch', 'Photos', 'Alarms', 'Finances', 'Settings']) {
+    for (const name of ['Tasks', 'Shopping', 'Calendar', 'Notes', 'Watch', 'Menu', 'Alarms', 'Finances', 'Settings']) {
       expect(screen.getByRole('link', { name: new RegExp(name) })).toBeInTheDocument();
     }
     expect(screen.getByLabelText('2 waiting')).toBeInTheDocument();

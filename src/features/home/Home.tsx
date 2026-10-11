@@ -62,13 +62,20 @@ export function Home() {
 
 function TodayPanel({ events, tasks, shopping, timeZone }: { events: TodayEvent[]; tasks: number; shopping: number; timeZone?: string }) {
   const lines: Array<{ key: string; to: string; colour: string; text: string; when?: string }> = [];
-  for (const e of events.slice(0, 2)) {
+  // At most three lines, so the box always fits the wall screen: jobs and shopping keep their line,
+  // events share what's left (with "+N more" when they don't all fit).
+  const budget = Math.max(1, 3 - (tasks > 0 ? 1 : 0) - (shopping > 0 ? 1 : 0));
+  const shown = events.length <= budget ? events : budget === 1 ? [] : events.slice(0, budget - 1);
+  if (events.length > budget && budget === 1) {
+    lines.push({ key: 'all', to: '/calendar', colour: 'var(--app-calendar)', text: `${events.length} things on today` });
+  }
+  for (const e of shown) {
     lines.push({
       key: e.start + e.title, to: '/calendar', colour: 'var(--app-calendar)', text: e.title,
-      when: e.allDay ? 'today' : new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(e.start)),
+      when: e.meal ? 'dinner' : e.allDay ? 'today' : new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone }).format(new Date(e.start)),
     });
   }
-  if (events.length > 2) lines.push({ key: 'more', to: '/calendar', colour: 'var(--app-calendar)', text: `+${events.length - 2} more today` });
+  if (events.length > budget && budget > 1) lines.push({ key: 'more', to: '/calendar', colour: 'var(--app-calendar)', text: `+${events.length - shown.length} more today` });
   if (tasks > 0) lines.push({ key: 'tasks', to: '/tasks', colour: 'var(--app-tasks)', text: `${tasks} job${tasks === 1 ? '' : 's'} to do today` });
   if (shopping > 0) lines.push({ key: 'shop', to: '/shopping', colour: 'var(--app-shopping)', text: `${shopping} thing${shopping === 1 ? '' : 's'} to buy` });
   return (

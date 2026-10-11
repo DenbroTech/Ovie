@@ -60,7 +60,7 @@ export function PhotosScreen() {
 
   const list = photos.data ?? [];
   return (
-    <Screen title="Photos" sheep="photos" actions={
+    <Screen title="Photos" sheep="photos" back="/settings" actions={
       <>
         <input ref={input} type="file" accept="image/*" multiple hidden onChange={(e) => void upload(e.target.files)} aria-label="Choose photos" />
         <button type="button" className="btn btn-primary" disabled={!online || !!uploading} onClick={() => input.current?.click()}>

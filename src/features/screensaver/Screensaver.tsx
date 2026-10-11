@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarDays, Check, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
 import { FitText } from '../../components/FitText';
+import { eventWhenLabel } from '../../lib/menu';
 import { CroppedPhoto } from '../../components/CroppedPhoto';
 import { OvieSheep, reactSheep, type SheepMood } from '../../components/OvieSheep';
 import { isNight, storedNight } from '../../app/theme';
@@ -59,7 +60,7 @@ interface TaskLite { id: string; title: string; due_on: string | null; assignee_
 interface TitleLite extends ReleaseFields { id: string; name: string; seasons: number[]; kind: string; status: string }
 interface ViewLite { title_id: string; member_id: string | null; season: number; episode: number }
 interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean; colour: string; created_at: string }
-interface EventLite extends EventLike { title: string; member_id: string | null; location: string | null }
+interface EventLite extends EventLike { title: string; member_id: string | null; location: string | null; meal_id: string | null }
 interface ItemLite { id: string; name: string; qty: string | null; list_id: string }
 
 /** One big panel shows one topic at a time, readable from across the room. Today always comes first. */
@@ -85,7 +86,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
 
   const photos = usePhotos(hid);
   const events = useLive<EventLite[]>('ss-events', hid, ['events'], () =>
-    supabase.from('events').select('id,title,starts_at,ends_at,all_day,repeat,member_id,location').eq('household_id', hid!));
+    supabase.from('events').select('id,title,starts_at,ends_at,all_day,repeat,member_id,location,meal_id').eq('household_id', hid!));
   const tasks = useLive<TaskLite[]>('ss-tasks', hid, ['tasks'], () =>
     supabase.from('tasks').select('id,title,due_on,assignee_id').eq('household_id', hid!).is('completed_at', null)
       .lte('due_on', weekEnd).order('due_on').limit(7));
@@ -131,7 +132,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const months = trend ? finishedMonths(trend, ['RENT'], today) : [];
   const hasMoney = months.some((m) => m.total > 0);
   const counts = [
-    ...countdowns(events.data ?? [], today).map((c) => ({ id: c.event.id, title: c.event.title, days: c.days })),
+    ...countdowns((events.data ?? []).filter((e) => !e.meal_id), today).map((c) => ({ id: c.event.id, title: c.event.title, days: c.days })),
     ...upcomingReleases(titles.data ?? [], watchedOf, today),
   ].sort((a, b) => a.days - b.days).slice(0, 3);
   // Tonight's pick: something on the go with an episode left (or a film), else the top of the watchlist.
@@ -239,7 +240,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               <FitText className="ss-fit" max={48} min={22}>
               {todayOcc.length === 0 ? <p className="ss-big-quiet">Nothing on today</p> : todayOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id} className="ss-item">
-                  <span className="ss-when">{o.event.all_day ? 'All day' : fmtTime(o.start)}</span>{o.event.title}
+                  <span className="ss-when">{eventWhenLabel(o.event, () => fmtTime(o.start))}</span>{o.event.title}
                 </p>
               ))}
               </FitText>
