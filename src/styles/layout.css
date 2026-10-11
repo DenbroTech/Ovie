@@ -553,3 +553,20 @@ section + section > .group-label { margin-top: var(--s-5); }
 .emoji-btn { height: 48px; font-size: 1.6rem; border-radius: var(--r-md); border: 2px solid var(--border); background: var(--surface); cursor: pointer; }
 .emoji-btn[aria-checked='true'] { border-color: var(--accent); background: var(--accent-soft); }
 :root[data-device='wall'] .menu-day { min-height: 72px; grid-template-columns: 10rem 1fr; }
+
+/* ---------- calendar favourites ---------- */
+.fav-list { display: grid; gap: var(--s-2); }
+.fav-row { display: flex; align-items: center; gap: var(--s-2); }
+.fav-pick { flex: 1; min-width: 0; display: grid; grid-template-columns: auto 1fr; column-gap: var(--s-3); align-items: center; text-align: left;
+  padding: var(--s-3) var(--s-4); min-height: var(--tap); border-radius: var(--r-md); border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font: inherit; cursor: pointer; }
+.fav-pick .muted { grid-column: 2; }
+.fav-star { grid-row: span 2; color: #d9a43a; fill: #d9a43a; }
+.fav-title { font-weight: 800; font-size: var(--fs-lg); overflow-wrap: break-word; min-width: 0; }
+.fav-grid .month-day.picked { background: var(--accent); color: #fff; border-color: var(--accent); }
+.fav-grid .month-day:disabled { opacity: 0.35; }
+.fav-pick-label { font-size: 0.68rem; font-weight: 800; line-height: 1.1; max-width: 100%; overflow-wrap: anywhere; }
+.fav-time-row { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr) auto; gap: var(--s-2); align-items: center; }
+.fav-time-row input { min-width: 0; }
+.star-btn.is-on { border-color: #d9a43a; background: color-mix(in srgb, #d9a43a 14%, var(--surface)); }
+.star-btn svg { color: #d9a43a; }

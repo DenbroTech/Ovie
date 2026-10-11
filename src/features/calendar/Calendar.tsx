@@ -1,6 +1,8 @@
 import { eventWhenLabel } from '../../lib/menu';
 import { useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Star, Trash2 } from 'lucide-react';
+import { FavouriteChooser, FavouriteDays, FavouriteEdit } from './Favourites';
+import { FAV_COLS, findFavourite, withTime, type Favourite } from '../../lib/favourites';
 import { Screen } from '../../components/Screen';
 import { Sheet } from '../../components/Sheet';
 import { PersonPicker, WhoBadge } from '../../components/PersonPicker';
@@ -43,6 +45,11 @@ export function CalendarScreen() {
   const [selected, setSelected] = useState(today);
   const [editing, setEditing] = useState<CalEvent | { newOn: string } | null>(null);
 
+  const favs = useLive<Favourite[]>('event-favourites', hid, ['event_favourites'], () =>
+    supabase.from('event_favourites').select(FAV_COLS).eq('household_id', hid!).order('title'));
+  const [choosing, setChoosing] = useState(false);
+  const [usingFav, setUsingFav] = useState<Favourite | null>(null);
+  const [editingFav, setEditingFav] = useState<Favourite | null>(null);
   const live = useLive<CalEvent[]>('events', hid, ['events'], () =>
     supabase.from('events').select(COLS).eq('household_id', hid!).order('starts_at'));
   const events = live.data ?? [];
@@ -67,7 +74,7 @@ export function CalendarScreen() {
   return (
     <Screen title="Calendar" sheep="calendar" actions={
       <button type="button" className="btn btn-primary btn-icon" aria-label="New event" disabled={!online}
-        onClick={() => setEditing({ newOn: view === 'month' ? selected : today })}>
+        onClick={() => ((favs.data ?? []).length ? setChoosing(true) : setEditing({ newOn: view === 'month' ? selected : today }))}>
         <Plus size={26} />
       </button>
     }>
@@ -130,8 +137,22 @@ export function CalendarScreen() {
 
       {editing && hid && (
         <EventSheet event={'id' in editing ? editing : null} newOn={'newOn' in editing ? editing.newOn : today}
-          householdId={hid} myId={me?.id ?? null} members={members}
-          onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void live.reload(); }} />
+          householdId={hid} myId={me?.id ?? null} members={members} favourites={favs.data ?? []}
+          onClose={() => setEditing(null)} onSaved={() => { setEditing(null); void live.reload(); void favs.reload(); }} />
+      )}
+      {choosing && (
+        <FavouriteChooser favs={favs.data ?? []} onClose={() => setChoosing(false)}
+          onPick={(f) => { setChoosing(false); setUsingFav(f); }}
+          onEdit={(f) => { setChoosing(false); setEditingFav(f); }}
+          onNew={() => { setChoosing(false); setEditing({ newOn: view === 'month' ? selected : today }); }} />
+      )}
+      {usingFav && hid && (
+        <FavouriteDays fav={usingFav} householdId={hid} myId={me?.id ?? null} today={today}
+          onClose={() => setUsingFav(null)} onSaved={() => { setUsingFav(null); void live.reload(); }} />
+      )}
+      {editingFav && (
+        <FavouriteEdit fav={editingFav} members={members} onClose={() => setEditingFav(null)}
+          onSaved={() => { setEditingFav(null); void favs.reload(); }} />
       )}
     </Screen>
   );
@@ -163,8 +184,8 @@ function localParts(iso: string): { date: string; time: string } {
   return { date: toIso(d), time: `${p(d.getHours())}:${p(d.getMinutes())}` };
 }
 
-function EventSheet({ event, newOn, householdId, myId, members, onClose, onSaved }: {
-  event: CalEvent | null; newOn: string; householdId: string; myId: string | null; members: Member[];
+function EventSheet({ event, newOn, householdId, myId, members, favourites, onClose, onSaved }: {
+  event: CalEvent | null; newOn: string; householdId: string; myId: string | null; members: Member[]; favourites: Favourite[];
   onClose: () => void; onSaved: () => void;
 }) {
   const toast = useToast();
@@ -181,6 +202,8 @@ function EventSheet({ event, newOn, householdId, myId, members, onClose, onSaved
   const [notes, setNotes] = useState(event?.notes ?? '');
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [star, setStar] = useState(false);
+  const alreadyFav = findFavourite(favourites, title);
 
   const startsAt = allDay ? new Date(`${date}T00:00`) : new Date(`${date}T${from || '00:00'}`);
   const endsAt = !allDay && to ? new Date(`${date}T${to}`) : null;
@@ -195,9 +218,19 @@ function EventSheet({ event, newOn, householdId, myId, members, onClose, onSaved
     const { error } = event
       ? await supabase.from('events').update(row).eq('id', event.id)
       : await supabase.from('events').insert({ ...row, household_id: householdId, created_by: myId });
+    // ★ keeps everything but the date; saving again with another time adds that time (e.g. a second shift).
+    let starred = false;
+    if (!error && star) {
+      const time = allDay ? null : { label: '', from, to: to || null };
+      const fav = { title: title.trim(), member_id: who, location: location.trim() || null, notes: notes.trim() || null, all_day: allDay };
+      const res = alreadyFav
+        ? await supabase.from('event_favourites').update({ ...fav, times: time ? withTime(alreadyFav.times, time) : alreadyFav.times }).eq('id', alreadyFav.id)
+        : await supabase.from('event_favourites').insert({ ...fav, times: time ? [time] : [], household_id: householdId, created_by: myId });
+      if (res.error) toast(friendlyError(res.error), 'error'); else starred = true;
+    }
     setBusy(false);
     if (error) toast(friendlyError(error), 'error');
-    else { toast(event ? 'Saved' : 'Added to the calendar'); onSaved(); }
+    else { toast(starred ? (alreadyFav ? 'Saved, and the time added to the favourite' : 'Saved, and starred as a favourite') : event ? 'Saved' : 'Added to the calendar'); onSaved(); }
   }
 
   return (
@@ -250,6 +283,11 @@ function EventSheet({ event, newOn, householdId, myId, members, onClose, onSaved
           <label htmlFor="e-notes">Notes</label>
           <textarea id="e-notes" maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />
         </div>
+        <button type="button" className={`btn btn-secondary star-btn${star ? ' is-on' : ''}`} aria-pressed={star} onClick={() => setStar((s) => !s)}>
+          <Star size={20} fill={star ? 'currentColor' : 'none'} />
+          {alreadyFav ? (star ? 'This time will be added to the favourite' : 'Add this time to the favourite') : star ? 'Will be saved as a favourite' : 'Save as a favourite'}
+        </button>
+        <p className="muted small">A favourite keeps everything but the date, so next time it's one tap. Saving again with another time adds that time (like a second shift).</p>
         {event && event.repeat !== 'none' && <p className="muted small">Changes apply to every repeat of this event.</p>}
       </Sheet>
       {confirmDelete && event && (
