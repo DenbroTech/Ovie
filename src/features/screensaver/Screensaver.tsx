@@ -7,6 +7,7 @@ import { useLive } from '../../lib/live';
 import { usePhotos } from '../../lib/photos';
 import { formatClock, formatLongDate } from '../../lib/time';
 import { addDays, countdowns, daysBetween, expandEvents, money, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
+import { RELEASE_COLS, episodeRelease, nextOutEpisode, upcomingReleases, type ReleaseFields } from '../../lib/releases';
 import { notesForWall, postitColour, postitTilt } from '../../lib/postits';
 import { moneyGlance, type TrendMonth } from '../../lib/financeChart';
 
@@ -51,7 +52,7 @@ export function useIdle(minutes: number): [boolean, () => void] {
 // ---------- what to show ----------
 
 interface TaskLite { id: string; title: string; due_on: string | null; assignee_id: string | null }
-interface TitleLite { id: string; name: string; seasons: number[]; kind: string; status: string }
+interface TitleLite extends ReleaseFields { id: string; name: string; seasons: number[]; kind: string; status: string }
 interface ViewLite { title_id: string; member_id: string | null; season: number; episode: number }
 interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean; colour: string; created_at: string }
 interface EventLite extends EventLike { title: string; member_id: string | null; location: string | null }
@@ -101,7 +102,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     supabase.from('tasks').select('id,title,due_on,assignee_id').eq('household_id', hid!).is('completed_at', null)
       .lte('due_on', weekEnd).order('due_on').limit(7));
   const titles = useLive<TitleLite[]>('ss-titles', hid, ['titles'], () =>
-    supabase.from('titles').select('id,name,seasons,kind,status').eq('household_id', hid!).in('status', ['watching', 'want'])
+    supabase.from('titles').select(`id,name,seasons,kind,status,${RELEASE_COLS}`).eq('household_id', hid!).in('status', ['watching', 'want'])
       .order('updated_at', { ascending: false }).limit(8));
   const views = useLive<ViewLite[]>('ss-views', hid, ['viewings'], () =>
     supabase.from('viewings').select('title_id,member_id,season,episode').eq('household_id', hid!).is('member_id', null));
@@ -132,15 +133,21 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
 
   const name = (id: string | null) => members.find((m) => m.id === id)?.display_name;
   const week = expandEvents(events.data ?? [], today, weekEnd);
-  const nextFor = (t: TitleLite) => nextEpisode(t.seasons, (views.data ?? []).filter((v) => v.title_id === t.id));
+  const watchedOf = (id: string) => (views.data ?? []).filter((v) => v.title_id === id);
+  // Only episodes (and films) that are actually out can be tonight's pick.
+  const nextFor = (t: TitleLite) => nextOutEpisode(t, watchedOf(t.id), today);
+  const ready = (t: TitleLite) => (t.kind === 'film' ? episodeRelease(t, 0, 0, today).out : !!nextFor(t));
   const wantList = (titles.data ?? []).filter((t) => t.status === 'want');
   // Rent dwarfs everything else (and never changes), so the wall leaves it out.
   const glance = trend && trend.length ? moneyGlance(trend, ['RENT']) : null;
   const hasMoney = !!glance && (glance.spent > 0 || !!glance.usual);
   const status = glance ? moneyStatus(glance.spent, glance.usual, monthFraction(today)) : null;
-  const counts = countdowns(events.data ?? [], today);
+  const counts = [
+    ...countdowns(events.data ?? [], today).map((c) => ({ id: c.event.id, title: c.event.title, days: c.days })),
+    ...upcomingReleases(titles.data ?? [], watchedOf, today),
+  ].sort((a, b) => a.days - b.days).slice(0, 3);
   // Tonight's pick: something on the go with an episode left (or a film), else the top of the watchlist.
-  const pickTitle = (titles.data ?? []).find((t) => t.status === 'watching' && (t.kind === 'film' || nextFor(t))) ?? wantList[0] ?? null;
+  const pickTitle = (titles.data ?? []).find((t) => t.status === 'watching' && ready(t)) ?? wantList.find(ready) ?? null;
   const pickNext = pickTitle ? (pickTitle.kind === 'film' ? { season: 0, episode: 0 } : nextFor(pickTitle)) : null;
   const pick = pickTitle && pickNext ? { title: pickTitle, next: pickNext, label: pickTitle.kind === 'film' ? 'Film' : `S${pickNext.season} E${pickNext.episode}` } : null;
 
@@ -261,9 +268,9 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               <h3><Hourglass size={24} /> Countdown</h3>
               <div className="ss-counts">
                 {counts.slice(0, 2).map((c) => (
-                  <div key={c.event.id} className="ss-count">
+                  <div key={c.id} className="ss-count">
                     <div className="ss-count-num">{c.days}<span>{c.days === 1 ? 'day' : 'days'}</span></div>
-                    <div className="ss-count-title">{c.event.title}</div>
+                    <div className="ss-count-title">{c.title}</div>
                   </div>
                 ))}
               </div>

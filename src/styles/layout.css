@@ -492,3 +492,10 @@ section + section > .group-label { margin-top: var(--s-5); }
 .frame-fit-row output { text-align: center; font-variant-numeric: tabular-nums; font-weight: 800; }
 .frame-fit-btn { min-width: var(--tap); padding: 0; }
 .btn-link { background: none; border: 0; padding: 0; font: inherit; color: var(--accent); font-weight: 700; text-decoration: underline; cursor: pointer; }
+
+/* Watch: when the next episode comes out */
+.watch-soon { font-weight: 700; color: var(--text-2); padding: var(--s-2) 0; }
+.release-box { border: 1px solid var(--border); border-radius: var(--r-md); padding: var(--s-3) var(--s-4) var(--s-4); margin: 0; display: grid; gap: var(--s-3); min-width: 0; }
+.release-box legend { font-weight: 800; padding: 0 var(--s-2); }
+.release-box .field-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1.7fr); }
+.release-box .field, .release-box input { min-width: 0; width: 100%; }
