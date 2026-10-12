@@ -43,6 +43,8 @@ jobs:
         run: npm run build
       # GitHub Pages has no rewrite rules: serve the app for any path (e.g. /Ovie/settings).
       - run: cp dist/index.html dist/404.html
+      # The Pi installer at a short address: curl -sL denbrotech.github.io/Ovie/pi | bash
+      - run: cp scripts/pi/install.sh dist/pi
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
