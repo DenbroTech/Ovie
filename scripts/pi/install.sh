@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Ovie kiosk installer for Raspberry Pi OS (desktop). Run as your normal user, not root:
+#   curl -sL denbrotech.github.io/Ovie/pi | bash     (short form; same as the line below)
 #   curl -fsSL https://raw.githubusercontent.com/DenbroTech/Ovie/main/scripts/pi/install.sh | bash
 # It only adds files in your home folder (plus turning off screen blanking). Nothing else is removed.
 # Undo with: bash ~/.ovie-kiosk/uninstall.sh

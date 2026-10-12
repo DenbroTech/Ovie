@@ -15,8 +15,9 @@ You need a USB keyboard plugged into the Pi for this part (and a mouse helps).
 3. Open **Terminal**: press **Ctrl + Alt + T** (or the black screen icon at the top).
 4. Paste or type this line, then press **Enter**:
    ```
-   curl -fsSL https://raw.githubusercontent.com/DenbroTech/Ovie/main/scripts/pi/install.sh | bash
+   curl -sL denbrotech.github.io/Ovie/pi | bash
    ```
+   (Longer form of the same thing: `curl -fsSL https://raw.githubusercontent.com/DenbroTech/Ovie/main/scripts/pi/install.sh | bash`)
    It checks the Pi, installs Chromium if needed (it may ask for your Pi password), and sets everything up. It ends with **"Done!"**.
    - If it says Chromium is **too old**, run `sudo apt update && sudo apt full-upgrade -y`, wait, then run the line above again.
    - It lists other things that start at power-on (for example your cat game). If one of them also opens full screen, tell me and I'll sort out which one wins.
