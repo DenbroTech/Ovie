@@ -12,6 +12,16 @@ interface AuthState {
   retry: () => void;
 }
 
+function savedSession(): Session | null {
+  try {
+    const raw = JSON.parse(localStorage.getItem('ovie-auth') ?? 'null');
+    const s = raw?.currentSession ?? raw;
+    return s?.access_token && s?.user?.id ? (s as Session) : null;
+  } catch {
+    return null;
+  }
+}
+
 const AuthContext = createContext<AuthState>({ session: null, loading: true, error: null, retry: () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -22,10 +32,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const ensureSession = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const { data } = await supabase.auth.getSession();
+    const { data, error: getErr } = await supabase.auth.getSession();
     if (data.session) {
       setSession(data.session);
       setLoading(false);
+      return;
+    }
+    // Offline with an expired sign-in: keep using the saved one (reads come from this device's copy) and
+    // try again when the connection is back. Never sign in afresh just because the network is down:
+    // a new sign-in would be a new, unpaired device.
+    const saved = savedSession();
+    if (saved && (getErr || !navigator.onLine)) {
+      setSession(saved);
+      setLoading(false);
+      const again = () => { window.removeEventListener('online', again); void ensureSession(); };
+      window.addEventListener('online', again);
       return;
     }
     const res = await supabase.auth.signInAnonymously();

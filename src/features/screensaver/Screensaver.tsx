@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarDays, Check, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
 import { FitText } from '../../components/FitText';
+import { SHUTDOWN_HELPER_URL } from '../../lib/pi';
 import { eventWhenLabel } from '../../lib/menu';
 import { CroppedPhoto } from '../../components/CroppedPhoto';
 import { OvieSheep, reactSheep, type SheepMood } from '../../components/OvieSheep';
@@ -74,7 +75,9 @@ export function slidesToShow(has: Partial<Record<Exclude<SlideId, 'today'>, bool
 }
 
 export function Screensaver({ onWake }: { onWake: () => void }) {
-  const { household, members } = useHousehold();
+  const { household, members, thisDevice } = useHousehold();
+  const isWall = thisDevice?.kind === 'wall';
+  const [askOff, setAskOff] = useState(false);
   const hid = household?.id;
   const tz = household?.timezone;
   const today = todayIso(tz);
@@ -229,7 +232,12 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
             <div className="ss-clock">{formatClock(now, tz)}</div>
             <div className="ss-date">{formatLongDate(now, tz)}</div>
           </div>
-          <OvieSheep size={84} reacts mood={cornerMood} />
+          {isWall ? (
+            <button type="button" className="ss-sheep-btn" aria-label="Shut down the Pi"
+              onClick={(e) => { e.stopPropagation(); setAskOff(true); }}>
+              <OvieSheep size={84} reacts mood={cornerMood} />
+            </button>
+          ) : <OvieSheep size={84} reacts mood={cornerMood} />}
         </div>
 
         {/* One topic at a time, in big type */}
@@ -241,6 +249,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               {todayOcc.length === 0 ? <p className="ss-big-quiet">Nothing on today</p> : todayOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id} className="ss-item">
                   <span className="ss-when">{eventWhenLabel(o.event, () => fmtTime(o.start))}</span>{o.event.title}
+                  {!o.event.all_day && o.end && <span className="ss-until">until {fmtTime(o.end)}</span>}
                 </p>
               ))}
               </FitText>
@@ -289,6 +298,9 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               {laterOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id + o.day} className="ss-item">
                   <span className="ss-when">{shortDay(o.day)}</span>{o.event.title}
+                  {!o.event.all_day && !o.event.meal_id && (
+                    <span className="ss-until">{fmtTime(o.start)}{o.end ? ` – ${fmtTime(o.end)}` : ''}</span>
+                  )}
                 </p>
               ))}
               </FitText>
@@ -341,6 +353,19 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
           </div>
         )}
       </div>
+      {askOff && (
+        <div className="ss-ask" role="alertdialog" aria-modal="true" aria-label="Shut down the Pi?" onClick={(e) => { e.stopPropagation(); setAskOff(false); }}>
+          <div className="ss-ask-box" onClick={(e) => e.stopPropagation()}>
+            <OvieSheep size={96} mood="sleepy" title="" />
+            <p className="ss-ask-title">Shut down the Pi?</p>
+            <p className="ss-ask-sub">When the screen goes dark and the green light stops flashing, switch off at the wall.</p>
+            <div className="ss-ask-buttons">
+              <button type="button" className="btn ss-ask-no" onClick={() => setAskOff(false)}>Cancel</button>
+              <button type="button" className="btn ss-ask-yes" onClick={() => { window.location.href = SHUTDOWN_HELPER_URL; }}>Shut down</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

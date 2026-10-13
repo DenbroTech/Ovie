@@ -570,3 +570,21 @@ section + section > .group-label { margin-top: var(--s-5); }
 .fav-time-row input { min-width: 0; }
 .star-btn.is-on { border-color: #d9a43a; background: color-mix(in srgb, #d9a43a 14%, var(--surface)); }
 .star-btn svg { color: #d9a43a; }
+
+/* quiet connection status (Settings) */
+.connection-line { display: flex; align-items: baseline; gap: var(--s-2); margin: 0; font-size: var(--fs-sm); font-weight: 700; color: var(--text-2); }
+.connection-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #4fa86a; transform: translateY(1px); }
+.connection-line.is-offline .connection-dot { background: #d9a43a; }
+
+/* screensaver: tap Ovie to shut down the Pi (asks first) */
+.ss-sheep-btn { background: none; border: 0; padding: 0; cursor: pointer; border-radius: 50%; }
+.ss-ask { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgb(0 0 0 / 0.6); }
+.ss-ask-box { display: grid; justify-items: center; gap: 12px; background: #221f1b; color: #efe7da; border-radius: 24px; padding: 28px 36px; max-width: 560px; text-align: center; }
+.ss-ask-title { margin: 0; font-size: 2.2rem; font-weight: 900; }
+.ss-ask-sub { margin: 0; font-size: 1.15rem; font-weight: 600; color: #b9ae9f; }
+.ss-ask-buttons { display: flex; gap: 16px; margin-top: 8px; }
+.ss-ask-buttons .btn { min-height: 72px; min-width: 180px; font-size: 1.5rem; font-weight: 900; border-radius: 18px; }
+.ss-ask-no { background: #3a352f; color: #efe7da; border: 0; }
+.ss-ask-yes { background: #c4554d; color: #fff; border: 0; }
+/* screensaver calendar: time / end time as a line under the entry */
+.ss-until { display: block; font-size: 0.6em; font-weight: 700; color: #9f9585; margin-top: 0.05em; font-variant-numeric: tabular-nums; }

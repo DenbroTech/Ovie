@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from './supabase';
 import { friendlyError } from './errors';
+import { STATUS_EVENT, SYNC_EVENT, isConnected } from './offline';
 
 /**
  * Load rows and keep them live: any change to `tables` in this household (from any device)
@@ -47,7 +48,14 @@ export function useLive<T>(
     channel.subscribe((s) => {
       if (s === 'SUBSCRIBED') soon();
     });
+    // Offline changes were just sent, or the connection came back: fetch the real data again.
+    const onSync = () => soon();
+    const onStatus = () => { if (isConnected()) soon(); };
+    window.addEventListener(SYNC_EVENT, onSync);
+    window.addEventListener(STATUS_EVENT, onStatus);
     return () => {
+      window.removeEventListener(SYNC_EVENT, onSync);
+      window.removeEventListener(STATUS_EVENT, onStatus);
       window.clearTimeout(timer.current);
       void supabase.removeChannel(channel);
     };

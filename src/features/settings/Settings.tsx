@@ -32,9 +32,8 @@ function lastSeen(iso: string): string {
 }
 
 /** The Pi kiosk's local helper (scripts/pi/helper.py) — only reachable on the Pi itself. */
-export const DESKTOP_HELPER_URL = 'http://127.0.0.1:8765/exit';
-export const SHUTDOWN_HELPER_URL = 'http://127.0.0.1:8765/shutdown';
-export const RESTART_HELPER_URL = 'http://127.0.0.1:8765/restart';
+import { DESKTOP_HELPER_URL, RESTART_HELPER_URL, SHUTDOWN_HELPER_URL } from '../../lib/pi';
+export { DESKTOP_HELPER_URL, RESTART_HELPER_URL, SHUTDOWN_HELPER_URL };
 
 type Confirm =
   | { kind: 'desktop' }
@@ -155,6 +154,7 @@ export function SettingsScreen() {
             onClick={() => setConfirm({ kind: 'unpair', device: thisDevice, self: true })}>
             <Unlink size={20} /> Remove this device from Ovie
           </button>
+          <ConnectionLine />
           <p className="muted small">Ovie version {__BUILD_ID__}</p>
         </section>
 
@@ -389,5 +389,19 @@ function FrameFit() {
         <button type="button" className="btn-link" onClick={() => setLocal(setFrame(DEFAULT_FRAME))}>Reset</button>
       </span>
     </div>
+  );
+}
+
+/** A quiet status line instead of a banner: Ovie keeps working offline and catches up later. */
+function ConnectionLine() {
+  const { connected, waiting } = useConnection();
+  const changes = `${waiting} change${waiting === 1 ? '' : 's'}`;
+  return (
+    <p className={`connection-line${connected ? '' : ' is-offline'}`} role="status">
+      <span className="connection-dot" aria-hidden="true" />
+      {connected
+        ? waiting ? `Online · sending ${changes}…` : 'Online · everything is up to date'
+        : `Offline · showing the last saved info${waiting ? ` · ${changes} will be sent when it's back online` : '. Changes made now are sent when it’s back online.'}`}
+    </p>
   );
 }

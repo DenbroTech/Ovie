@@ -19,12 +19,14 @@ export function slideDirection(pathname: string, state: unknown): 'forward' | 'b
   return pathname === '/' ? 'none' : 'forward';
 }
 
+/** Only for setting up / pairing a device, which needs the server. Inside Ovie there's no banner:
+ *  it works offline, and Settings says quietly when it's offline. */
 export function OfflineBanner() {
-  const { online } = useConnection();
-  if (online) return null;
+  const { connected } = useConnection();
+  if (connected) return null;
   return (
     <div className="offline-banner" role="status">
-      <OvieSheep size={34} mood="sad" title="" /><WifiOff size={18} /> Offline — reconnecting… Changes are paused until Ovie is back online.
+      <OvieSheep size={34} mood="sad" title="" /><WifiOff size={18} /> No internet. Setting up needs a connection.
     </div>
   );
 }
@@ -58,7 +60,6 @@ export function Shell() {
 
   return (
     <div className="shell">
-      <OfflineBanner />
       <AlarmRinger />
       {idle && <Screensaver onWake={wake} />}
       <div key={location.pathname} className={`page slide-${dir}`}>
