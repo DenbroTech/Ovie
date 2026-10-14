@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Gift, Plus, Repeat, Star, Trash2, Undo2, Check } from 'lucide-react';
+import { Bell, CalendarDays, Gift, Plus, Repeat, Star, Trash2, Undo2, Check } from 'lucide-react';
 import { Screen } from '../../components/Screen';
 import { Sheet } from '../../components/Sheet';
 import { PersonPicker, WhoBadge } from '../../components/PersonPicker';
@@ -31,9 +31,13 @@ export interface Task {
   /** Oviemeter points for whoever does it (1-10), and/or a treat in words */
   reward_points: number | null;
   reward_text: string | null;
+  /** deadline time (with due_on), whether it shows on the calendar, and whether it sets off an alarm */
+  due_time: string | null;
+  in_calendar: boolean;
+  remind: boolean;
 }
 
-const COLS = 'id,household_id,title,notes,assignee_id,priority,due_on,repeat_every,repeat_unit,completed_at,completed_by,created_at,reward_points,reward_text';
+const COLS = 'id,household_id,title,notes,assignee_id,priority,due_on,repeat_every,repeat_unit,completed_at,completed_by,created_at,reward_points,reward_text,due_time,in_calendar,remind';
 
 type View = 'todo' | 'done';
 type Who = 'all' | string;
@@ -211,7 +215,9 @@ function TaskRow({ task, today, who, busy, onTick, onOpen }: {
         <span className="row-title">{task.priority === 1 && <Star size={16} className="star" fill="currentColor" aria-label="Important" />} {task.title}</span>
         {(task.due_on || rep) && (
           <span className="row-meta">
-            {task.due_on && <span className={late ? 'late' : undefined}>{late ? `Overdue · ${dayLabel(task.due_on, today)}` : dayLabel(task.due_on, today)}</span>}
+            {task.due_on && <span className={late ? 'late' : undefined}>{late ? `Overdue · ${dayLabel(task.due_on, today)}` : dayLabel(task.due_on, today)}{task.due_time ? ` · ${hhmm(task.due_time)}` : ''}</span>}
+            {task.remind && <span><Bell size={14} aria-label="Alarm" /></span>}
+            {task.in_calendar && <span><CalendarDays size={14} aria-label="On the calendar" /></span>}
             {rep && <span><Repeat size={14} /> {rep}</span>}
           </span>
         )}
@@ -223,6 +229,13 @@ function TaskRow({ task, today, who, busy, onTick, onOpen }: {
 }
 
 const REWARD_POINTS = [1, 2, 3, 5, 10];
+
+/** "18:30" → "6:30 PM" */
+export const hhmm = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  const d = new Date(); d.setHours(h, m, 0, 0);
+  return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+};
 
 /** "🎁 +2 on the Oviemeter · Pick the movie" */
 function RewardLine({ task }: { task: Task }) {
@@ -262,6 +275,9 @@ function TaskSheet({ task, householdId, today, myId, onClose, onSaved }: {
   const [important, setImportant] = useState(task?.priority === 1);
   const initialRepeat = REPEATS.findIndex((r) => r.every === (task?.repeat_every ?? null) && r.unit === (task?.repeat_unit ?? null));
   const [repeatIdx, setRepeatIdx] = useState(initialRepeat < 0 ? 0 : initialRepeat);
+  const [dueTime, setDueTime] = useState(task?.due_time?.slice(0, 5) ?? '');
+  const [inCalendar, setInCalendar] = useState(task?.in_calendar ?? false);
+  const [remind, setRemind] = useState(task?.remind ?? false);
   const [rewardPoints, setRewardPoints] = useState<number | null>(task?.reward_points ?? null);
   const [rewardText, setRewardText] = useState(task?.reward_text ?? '');
   const [busy, setBusy] = useState(false);
@@ -276,6 +292,7 @@ function TaskSheet({ task, householdId, today, myId, onClose, onSaved }: {
       title: title.trim(), notes: notes.trim() || null, assignee_id: assignee, due_on: due || null,
       priority: important ? 1 : 0, repeat_every: repeat.every, repeat_unit: repeat.unit,
       reward_points: rewardPoints, reward_text: rewardText.trim() || null,
+      due_time: due && dueTime ? dueTime : null, in_calendar: !!due && inCalendar, remind: !!due && remind,
     };
     const { error } = task
       ? await supabase.from('tasks').update(row).eq('id', task.id)
@@ -315,6 +332,24 @@ function TaskSheet({ task, householdId, today, myId, onClose, onSaved }: {
           </div>
         </div>
         {needsDate && <div className="notice notice-warn">Pick a due date so Ovie knows when it starts repeating.</div>}
+        {due && (
+          <div className="field deadline-box">
+            <span className="field-label">Deadline</span>
+            <div className="field-inline">
+              <label htmlFor="t-time" className="muted small">By</label>
+              <input id="t-time" type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} />
+              {dueTime && <button type="button" className="btn btn-ghost" onClick={() => setDueTime('')}>No time</button>}
+            </div>
+            <label className="check">
+              <input type="checkbox" checked={remind} onChange={(e) => setRemind(e.target.checked)} />
+              <span><Bell size={16} /> Alarm on the day{dueTime ? ` at ${hhmm(dueTime)}` : ' at 9am'}{assignee ? ` for ${members.find((m) => m.id === assignee)?.display_name ?? 'them'}` : ' for everyone'} (and on the wall)</span>
+            </label>
+            <label className="check">
+              <input type="checkbox" checked={inCalendar} onChange={(e) => setInCalendar(e.target.checked)} />
+              <span><CalendarDays size={16} /> Show it on the calendar</span>
+            </label>
+          </div>
+        )}
         <label className="check">
           <input type="checkbox" checked={important} onChange={(e) => setImportant(e.target.checked)} />
           <span>Important</span>

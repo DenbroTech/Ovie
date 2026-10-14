@@ -96,7 +96,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
 
   const photos = usePhotos(hid);
   const events = useLive<EventLite[]>('ss-events', hid, ['events'], () =>
-    supabase.from('events').select('id,title,starts_at,ends_at,all_day,repeat,member_id,location,meal_id').eq('household_id', hid!));
+    supabase.from('events').select('id,title,starts_at,ends_at,all_day,repeat,repeat_every,member_id,location,meal_id').eq('household_id', hid!));
   const tasks = useLive<TaskLite[]>('ss-tasks', hid, ['tasks'], () =>
     supabase.from('tasks').select('id,title,due_on,assignee_id,reward_points,reward_text').eq('household_id', hid!).is('completed_at', null)
       .lte('due_on', weekEnd).order('due_on').limit(7));

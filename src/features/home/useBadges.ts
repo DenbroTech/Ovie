@@ -18,7 +18,7 @@ export function useBadges(householdId: string | undefined, timeZone: string | un
     return { data: r.count ?? 0, error: r.error };
   });
   const events = useLive<TodayEvent[]>('badge-events', householdId, ['events'], async () => {
-    const r = await supabase.from('events').select('id,title,starts_at,ends_at,all_day,repeat,meal_id').eq('household_id', householdId!);
+    const r = await supabase.from('events').select('id,title,starts_at,ends_at,all_day,repeat,repeat_every,meal_id').eq('household_id', householdId!);
     if (r.error) return { data: [], error: r.error };
     const occ = expandEvents((r.data ?? []) as Array<EventLike & { title: string; meal_id: string | null }>, today, today);
     return { data: occ.map((o) => ({ title: o.event.title, allDay: o.event.all_day, start: o.start.toISOString(), meal: !!o.event.meal_id })), error: null };

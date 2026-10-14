@@ -711,3 +711,12 @@ section + section > .group-label { margin-top: var(--s-5); }
 /* rewards on jobs */
 .task-reward { color: #d18a00; font-weight: 700; }
 .ss-reward { display: block; font-size: 0.6em; font-weight: 800; color: #f5c242; margin-top: 2px; }
+
+/* deadlines and repeats */
+.row-item.is-deadline { border-left: 4px solid var(--app-tasks); }
+.row-item.is-deadline .event-time { color: var(--app-tasks); font-weight: 800; }
+.deadline-box { padding: var(--s-3); border-radius: var(--r-md); background: var(--surface-2); }
+.deadline-box .check span { display: inline; }
+.deadline-box .check svg { vertical-align: -3px; margin-right: 4px; }
+.repeat-every { display: flex; align-items: center; gap: var(--s-2); font-weight: 700; }
+.repeat-every input { width: 80px; text-align: center; }
