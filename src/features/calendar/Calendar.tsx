@@ -1,7 +1,8 @@
 import { eventWhenLabel } from '../../lib/menu';
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Star, Trash2 } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { useAlarms } from '../alarms/Alarms';
+import { AlarmClock, ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Star, Trash2 } from 'lucide-react';
 import { FavouriteChooser, FavouriteDays, FavouriteEdit } from './Favourites';
 import { FAV_COLS, findFavourite, withTime, type Favourite } from '../../lib/favourites';
 import { Screen } from '../../components/Screen';
@@ -44,6 +45,7 @@ export function CalendarScreen() {
   const [view, setView] = useState<View>('agenda');
   const [monthStart, setMonthStart] = useState(() => today.slice(0, 8) + '01');
   const [selected, setSelected] = useState(today);
+  const alarmsOn = (useAlarms(hid).data ?? []).filter((a) => a.enabled).length;
   const [editing, setEditing] = useState<CalEvent | { newOn: string } | null>(null);
   // arriving from "What's new" with a day that isn't in the list ahead: show that day on the month
   const arrival = (useLocation().state as { day?: string } | null)?.day;
@@ -93,6 +95,9 @@ export function CalendarScreen() {
             <button type="button" aria-pressed={view === 'agenda'} onClick={() => setView('agenda')}>Coming up</button>
             <button type="button" aria-pressed={view === 'month'} onClick={() => setView('month')}>Month</button>
           </div>
+          <Link to="/alarms" state={{ dir: 'forward' }} className="btn btn-secondary cal-alarms">
+            <AlarmClock size={20} /> Alarms{alarmsOn ? ` · ${alarmsOn}` : ''}
+          </Link>
         </div>
 
         {live.error ? <LoadError message={live.error} onRetry={() => void live.reload()} />

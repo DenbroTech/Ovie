@@ -59,7 +59,7 @@ export function AlarmsScreen() {
   }
 
   return (
-    <Screen title="Alarms" sheep="alarms" actions={
+    <Screen title="Alarms" sheep="alarms" back="/calendar" actions={
       <button type="button" className="btn btn-primary btn-icon" aria-label="New alarm" disabled={!online} onClick={() => setEditing('new')}>
         <Plus size={26} />
       </button>

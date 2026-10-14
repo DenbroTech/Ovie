@@ -653,3 +653,35 @@ section + section > .group-label { margin-top: var(--s-5); }
 }
 :root[data-device='wall'] .home-bell svg { width: 34px; height: 34px; }
 :root[data-device='wall'] .activity-badge { min-width: 26px; height: 26px; line-height: 26px; font-size: 15px; }
+
+/* ---------- Oviemeter ---------- */
+.meter-grid { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); margin-bottom: var(--s-5); }
+.meter-card { display: flex; flex-direction: column; align-items: center; gap: var(--s-2); padding: var(--s-4); border-radius: var(--r-lg, 20px);
+  background: var(--surface); box-shadow: var(--shadow-1); text-align: center; }
+.meter-card.is-angel { background: linear-gradient(180deg, color-mix(in srgb, #f5c242 14%, var(--surface)), var(--surface) 60%); }
+.meter-card.is-devil { background: linear-gradient(180deg, color-mix(in srgb, #d32f2f 12%, var(--surface)), var(--surface) 60%); }
+.meter-name { margin: 0; font-size: var(--fs-xl, 1.6rem); }
+.meter-sheep { overflow: visible; }
+.meter-halo { animation: meter-halo 3s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes meter-halo { 50% { transform: translateY(-5px); } }
+.meter-gauge { color: var(--text); max-width: 100%; }
+.meter-needle { transition: transform 0.9s cubic-bezier(.3, 1.5, .5, 1); }
+.meter-score { margin: 0; font-size: var(--fs-lg); }
+.meter-score strong { font-size: 2em; margin-right: 6px; }
+.meter-actions { display: flex; gap: var(--s-2); width: 100%; }
+.meter-actions .btn { flex: 1; justify-content: center; font-size: var(--fs-lg); }
+.meter-good { background: #43a047; color: #fff; }
+.meter-bad { background: #d32f2f; color: #fff; }
+.meter-look { width: 100%; }
+.meter-look button { flex: 1; font-size: var(--fs-sm); }
+.meter-pick { display: flex; flex-wrap: wrap; gap: 6px; }
+.meter-pick .chip-btn { min-width: 52px; justify-content: center; font-weight: 800; }
+.meter-pick .chip-btn.is-good[aria-checked='true'] { background: #43a047; border-color: #2e7d32; color: #fff; }
+.meter-pick .chip-btn.is-bad[aria-checked='true'] { background: #d32f2f; border-color: #b71c1c; color: #fff; }
+.meter-log { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s-2); }
+.meter-chip { flex: none; min-width: 48px; padding: 6px 10px; border-radius: 999px; font-weight: 800; text-align: center; color: #fff; }
+.meter-chip.is-good { background: #43a047; }
+.meter-chip.is-bad { background: #d32f2f; }
+.meter-log-main { cursor: default; }
+.cal-alarms { margin-left: auto; white-space: nowrap; text-decoration: none; }
+:root[data-device='wall'] .meter-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
