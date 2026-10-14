@@ -71,6 +71,7 @@ interface ItemLite { id: string; name: string; qty: string | null; list_id: stri
 /** One big panel shows one topic at a time, readable from across the room. Today always comes first. */
 export type SlideId = 'today' | 'jobs' | 'countdown' | 'week' | 'notes' | 'shopping' | 'money' | 'watch';
 export const SLIDE_SECONDS = 10;
+// The angel/devil scores (and their reasons) and the What's new list stay off the screensaver: see private.test.ts.
 const ORDER: SlideId[] = ['today', 'jobs', 'countdown', 'week', 'notes', 'shopping', 'money', 'watch'];
 
 /** Which topics to cycle through: today always, the rest only when they have something to show. */
