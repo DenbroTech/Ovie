@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider, useAuth } from './app/AuthProvider';
 import { HouseholdProvider, useHousehold } from './app/HouseholdProvider';
@@ -13,6 +13,12 @@ import { configError } from './lib/supabase';
 import type { ThemePref } from './lib/types';
 
 function ErrorPage({ message, onRetry }: { message: string; onRetry: () => void }) {
+  // a patchy connection usually comes back by itself: keep trying quietly
+  useEffect(() => {
+    const t = window.setInterval(onRetry, 15_000);
+    window.addEventListener('online', onRetry);
+    return () => { window.clearInterval(t); window.removeEventListener('online', onRetry); };
+  }, [onRetry]);
   return (
     <div className="center-page">
       <OfflineBanner />
