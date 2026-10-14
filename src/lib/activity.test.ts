@@ -50,3 +50,18 @@ describe('what’s new', () => {
     expect(say([row({ kind: 'event', title: 'Dentist', info: { starts_at: '2026-10-17T22:00:00Z' } })], null, 'Australia/Sydney')).toMatch(/^added “Dentist” to the calendar · Sun/);
   });
 });
+
+describe('Oviemeter in what’s new', () => {
+  it('says who gave whom points and why', () => {
+    const names = (id: string | null) => (id === 'm-l' ? 'Lina' : id === 'm-a' ? 'Andrew' : null);
+    expect(say([row({ kind: 'meter', title: 'Cooked dinner', info: { points: 2, to_member: 'm-l', from_member: 'm-a' } })], 'm-x', undefined, names))
+      .toBe('gave Lina +2 on the Oviemeter 😇: “Cooked dinner”');
+    expect(say([row({ kind: 'meter', title: 'Ate the last Tim Tam', info: { points: -1, to_member: 'm-a', from_member: 'm-l' } })], 'm-a', undefined, names))
+      .toBe('took 1 point off you on the Oviemeter 😈: “Ate the last Tim Tam”');
+  });
+  it('names the person picked as the giver on the wall screen', () => {
+    const [it1] = activityItems([row({ kind: 'meter', actor_user: 'u-wall', actor_member: null, actor_device: 'd-wall', title: 'x', info: { points: 1, to_member: 'm-a', from_member: 'm-l' } })], opts);
+    expect(it1.who).toBe('Lina');
+    expect(it1.path).toBe('/oviemeter');
+  });
+});

@@ -1,7 +1,7 @@
 /** "What's new": changes anyone in the house made (recorded by the database), worded for people,
  *  grouped when someone does lots of the same thing at once, and linked to where the change is. */
 
-export type ActivityKind = 'task' | 'shopping' | 'note' | 'event' | 'meal' | 'title' | 'viewing' | 'photo';
+export type ActivityKind = 'task' | 'shopping' | 'note' | 'event' | 'meal' | 'title' | 'viewing' | 'photo' | 'meter';
 export type ActivityAction = 'added' | 'changed' | 'done' | 'undone' | 'deleted';
 
 export interface ActivityRow {
@@ -36,7 +36,7 @@ export interface ActivityItem {
 }
 
 export const PATHS: Record<ActivityKind, string> = {
-  task: '/tasks', shopping: '/shopping', note: '/notes', event: '/calendar', meal: '/menu', title: '/watch', viewing: '/watch', photo: '/photos',
+  task: '/tasks', shopping: '/shopping', note: '/notes', event: '/calendar', meal: '/menu', title: '/watch', viewing: '/watch', photo: '/photos', meter: '/oviemeter',
 };
 
 /** Things that are often done in a burst read better as one line. */
@@ -60,7 +60,7 @@ function dayText(iso: unknown, timeZone?: string): string {
 }
 
 /** The sentence after the person's name. */
-export function describe(rows: ActivityRow[], meId: string | null, timeZone?: string): string {
+export function describe(rows: ActivityRow[], meId: string | null, timeZone?: string, nameOf: (id: string | null) => string | null = () => null): string {
   const r = rows[0];
   const titles = rows.map((x) => x.title);
   const many = rows.length > 1;
@@ -105,6 +105,15 @@ export function describe(rows: ActivityRow[], meId: string | null, timeZone?: st
       const s = Number(info.season), e = Number(info.episode);
       return `watched ${q(r.title)}${s > 0 && e > 0 ? ` S${s} E${e}` : ''}`;
     }
+    case 'meter': {
+      const pts = Number(info.points) || 0;
+      const to = typeof info.to_member === 'string' ? info.to_member : null;
+      const target = to && to === meId ? 'you' : nameOf(to) ?? 'someone';
+      const why = r.title ? `: ${q(r.title)}` : '';
+      return pts > 0
+        ? `gave ${target} +${pts} on the Oviemeter 😇${why}`
+        : `took ${-pts} point${pts === -1 ? '' : 's'} off ${target} on the Oviemeter 😈${why}`;
+    }
     case 'photo':
       return many ? `added ${rows.length} photos` : 'added a photo';
   }
@@ -127,12 +136,14 @@ export function activityItems(rows: ActivityRow[], opts: {
   return groups.map((g) => {
     const r = g[0];
     const mine = !!opts.myUserId && r.actor_user === opts.myUserId;
-    const person = opts.memberName(r.actor_member);
+    // on the wall screen the giver is picked, so name them rather than the device
+    const giver = r.kind === 'meter' && typeof r.info?.from_member === 'string' ? r.info.from_member : null;
+    const person = opts.memberName(giver ?? r.actor_member);
     const who = mine ? 'You' : person?.name ?? opts.deviceName(r.actor_device) ?? 'Someone';
     const day = (r.kind === 'event' || r.kind === 'meal') && typeof r.info?.starts_at === 'string' ? r.info.starts_at : undefined;
     return {
       key: g.map((x) => x.id).join('-'), rows: g, who, colour: mine ? null : person?.colour ?? null,
-      text: describe(g, opts.meId, opts.timeZone), path: PATHS[r.kind], ref: r.action === 'deleted' ? null : r.ref_id, day,
+      text: describe(g, opts.meId, opts.timeZone, (id) => opts.memberName(id)?.name ?? null), path: PATHS[r.kind], ref: r.action === 'deleted' ? null : r.ref_id, day,
       at: r.created_at, mine, unread: !mine && (!opts.seenAt || r.created_at > opts.seenAt),
     };
   });
