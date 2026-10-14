@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Minus, Plus, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import { Screen } from '../../components/Screen';
 import { Sheet } from '../../components/Sheet';
 import { ConfirmDialog } from '../../components/ConfirmDialog';
@@ -11,14 +11,14 @@ import { friendlyError } from '../../lib/errors';
 import { useLive } from '../../lib/live';
 import { ago } from '../../lib/activity';
 import {
-  lookOf, METER_COLS, METER_MAX, roomFor, scoreOf, signed, standing, type MeterLook, type MeterPoint,
+  lookOf, METER_COLS, METER_MAX, roomFor, scoreOf, signed, standing, type MeterPoint,
 } from '../../lib/meter';
 import type { Member } from '../../lib/types';
 import { MeterGauge, MeterSheep } from './MeterArt';
 
 /** Everyone's angel-or-devil dial. Give someone good or bad points (1–10 at a time), always saying why. */
 export function OviemeterScreen() {
-  const { household, members, me, thisDevice, refresh } = useHousehold();
+  const { household, members, me, thisDevice } = useHousehold();
   const toast = useToast();
   const hid = household?.id;
   const live = useLive<MeterPoint[]>('meter', hid, ['meter_points'], () =>
@@ -28,13 +28,6 @@ export function OviemeterScreen() {
   const points = live.data ?? [];
   const isWall = thisDevice?.kind === 'wall';
   const name = (id: string | null) => members.find((m) => m.id === id)?.display_name ?? 'Someone';
-
-  async function setLook(m: Member, look: MeterLook) {
-    if (!household) return;
-    const looks = { ...((household.settings?.meter_looks ?? {}) as Record<string, string>), [m.id]: look };
-    const { error } = await supabase.from('households').update({ settings: { ...household.settings, meter_looks: looks } }).eq('id', household.id);
-    if (error) toast(friendlyError(error), 'error'); else void refresh();
-  }
 
   async function remove(p: MeterPoint) {
     live.setData((rows) => rows?.filter((r) => r.id !== p.id) ?? rows);
@@ -49,7 +42,8 @@ export function OviemeterScreen() {
           : live.loading ? <Spinner /> : (
             <>
               <div className="meter-grid">
-                {members.map((m, i) => {
+                {/* on a phone, the people you can score come first, so their +1 / −1 are on screen straight away */}
+                {members.map((m, i) => ({ m, i })).sort((x, y) => Number(x.m.id === me?.id && !isWall) - Number(y.m.id === me?.id && !isWall)).map(({ m, i }) => {
                   const score = scoreOf(points, m.id);
                   const look = lookOf(household?.settings, m.id, i);
                   const st = standing(score);
@@ -60,18 +54,15 @@ export function OviemeterScreen() {
                       <MeterSheep score={score} look={look} />
                       <MeterGauge score={score} />
                       <p className="meter-score"><strong>{signed(score)}</strong> <span>{st.label}</span></p>
+                      {!canScore && members.length > 1 && <p className="muted small">Only {members.filter((x) => x.id !== m.id).map((x) => x.display_name).join(' or ')} can change your score</p>}
                       {canScore && (
                         <div className="meter-actions">
-                          <button type="button" className="btn meter-bad" disabled={roomFor(score, -1) === 0}
-                            onClick={() => setGiving({ to: m, sign: -1 })}><Minus size={20} /> Bad</button>
-                          <button type="button" className="btn meter-good" disabled={roomFor(score, 1) === 0}
-                            onClick={() => setGiving({ to: m, sign: 1 })}><Plus size={20} /> Good</button>
+                          <button type="button" className="btn meter-bad" disabled={roomFor(score, -1) === 0} aria-label={`Take a point off ${m.display_name}`}
+                            onClick={() => setGiving({ to: m, sign: -1 })}>😈 −1</button>
+                          <button type="button" className="btn meter-good" disabled={roomFor(score, 1) === 0} aria-label={`Give ${m.display_name} a point`}
+                            onClick={() => setGiving({ to: m, sign: 1 })}>😇 +1</button>
                         </div>
                       )}
-                      {!isWall && <div className="segmented meter-look" role="group" aria-label={`${m.display_name}'s sheep`}>
-                        <button type="button" aria-pressed={look === 'boy'} onClick={() => void setLook(m, 'boy')}>Boy sheep</button>
-                        <button type="button" aria-pressed={look === 'girl'} onClick={() => void setLook(m, 'girl')}>Girl sheep</button>
-                      </div>}
                     </section>
                   );
                 })}
@@ -80,7 +71,7 @@ export function OviemeterScreen() {
               <section>
                 <h2 className="group-label">What happened</h2>
                 {points.length === 0 ? (
-                  <Empty title="Nobody's been scored yet" mood="thinking">Tap Good or Bad under someone to give them points, and say why.</Empty>
+                  <Empty title="Nobody's been scored yet" mood="thinking">Tap +1 or −1 under someone, say why, and save. Pick a bigger number for something really good or bad.</Empty>
                 ) : (
                   <ul className="meter-log">
                     {points.map((p) => (
@@ -146,7 +137,7 @@ function GiveSheet({ householdId, to, sign, score, from, members, onClose, onSav
   }
 
   return (
-    <Sheet title={good ? `Good points for ${to.display_name} 😇` : `Bad points for ${to.display_name} 😈`} onClose={onClose}
+    <Sheet title={good ? `Plus points for ${to.display_name} 😇` : `Minus points for ${to.display_name} 😈`} onClose={onClose}
       onSubmit={() => void save()} busy={busy} canSubmit={room > 0 && !!reason.trim() && (!!from || !!giver)}
       submitLabel={good ? `Give ${signed(n)}` : `Take ${n} off`}>
       {room === 0 ? (
