@@ -60,3 +60,21 @@ describe('watch progress', () => {
     expect(totalEpisodes([10, 8])).toBe(18);
   });
 });
+
+import { repeatText } from './dates';
+describe('repeat every N', () => {
+  it('skips the weeks in between', () => {
+    const occ = expandEvents([{ id: 'b', starts_at: new Date(2026, 9, 1, 9).toISOString(), ends_at: null, all_day: false, repeat: 'weekly', repeat_every: 2 }], '2026-10-01', '2026-11-12');
+    expect(occ.map((o) => o.day)).toEqual(['2026-10-01', '2026-10-15', '2026-10-29', '2026-11-12']);
+  });
+  it('every 7 weeks, starting well before the window', () => {
+    const occ = expandEvents([{ id: 'c', starts_at: new Date(2026, 0, 1, 9).toISOString(), ends_at: null, all_day: false, repeat: 'weekly', repeat_every: 7 }], '2026-10-01', '2026-12-31');
+    expect(occ.map((o) => o.day)).toEqual(['2026-10-22', '2026-12-10']);
+  });
+  it('says how often', () => {
+    expect(repeatText('weekly', 1)).toBe('Every week');
+    expect(repeatText('weekly', 2)).toBe('Every 2 weeks');
+    expect(repeatText('monthly', 3)).toBe('Every 3 months');
+    expect(repeatText('none', 5)).toBe('Does not repeat');
+  });
+});

@@ -62,6 +62,8 @@ export interface EventLike {
   ends_at: string | null;
   all_day: boolean;
   repeat: EventRepeat;
+  /** repeat every N weeks / months / years (1 if missing) */
+  repeat_every?: number | null;
 }
 
 export interface Occurrence<E extends EventLike> {
@@ -69,6 +71,16 @@ export interface Occurrence<E extends EventLike> {
   start: Date;
   end: Date | null;
   day: string; // ISO date of the occurrence (device local)
+}
+
+const everyOf = (ev: { repeat_every?: number | null }) => Math.max(1, Math.min(52, ev.repeat_every ?? 1));
+
+/** "Every week", "Every 2 weeks", "Every 3 months", "Every year" */
+export function repeatText(repeat: EventRepeat, every: number | null | undefined = 1): string {
+  if (repeat === 'none') return 'Does not repeat';
+  const n = Math.max(1, every ?? 1);
+  const unit = repeat === 'weekly' ? 'week' : repeat === 'monthly' ? 'month' : 'year';
+  return n === 1 ? `Every ${unit}` : `Every ${n} ${unit}s`;
 }
 
 function step(d: Date, repeat: EventRepeat, n: number): Date {
@@ -108,11 +120,11 @@ export function expandEvents<E extends EventLike>(events: E[], fromIso: string, 
     // jump close to the window, then walk forward
     let n = 0;
     if (start.getTime() < from) {
-      const approx = ev.repeat === 'weekly' ? 7 : ev.repeat === 'monthly' ? 28 : 365;
+      const approx = (ev.repeat === 'weekly' ? 7 : ev.repeat === 'monthly' ? 28 : 365) * everyOf(ev);
       n = Math.max(0, Math.floor((from - start.getTime()) / (approx * 86_400_000)) - 1);
     }
     for (let guard = 0; guard < 600; guard++, n++) {
-      const s = step(start, ev.repeat, n);
+      const s = step(start, ev.repeat, n * everyOf(ev));
       if (s.getTime() >= to) break;
       if (s.getTime() >= from) {
         out.push({ event: ev, start: s, end: dur === null ? null : new Date(s.getTime() + dur), day: toIso(s) });

@@ -1,6 +1,6 @@
 import { eventWhenLabel } from '../../lib/menu';
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAlarms } from '../alarms/Alarms';
 import { AlarmClock, ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Star, Trash2 } from 'lucide-react';
 import { FavouriteChooser, FavouriteDays, FavouriteEdit } from './Favourites';
@@ -16,7 +16,7 @@ import { useConnection } from '../../app/ConnectionProvider';
 import { supabase } from '../../lib/supabase';
 import { friendlyError } from '../../lib/errors';
 import { useLive } from '../../lib/live';
-import { addDays, dayLabel, expandEvents, parseIso, timeLabel, toIso, todayIso, type EventRepeat, type Occurrence } from '../../lib/dates';
+import { addDays, dayLabel, expandEvents, parseIso, repeatText, timeLabel, toIso, todayIso, type EventRepeat, type Occurrence } from '../../lib/dates';
 import type { Member } from '../../lib/types';
 
 export interface CalEvent {
@@ -29,11 +29,25 @@ export interface CalEvent {
   all_day: boolean;
   member_id: string | null;
   repeat: EventRepeat;
+  repeat_every: number;
   meal_id: string | null;
+  /** a job's deadline shown on the calendar (not a real event) */
+  task?: boolean;
 }
 
-const COLS = 'id,title,notes,location,starts_at,ends_at,all_day,member_id,repeat,meal_id';
-const REPEAT_LABEL: Record<EventRepeat, string> = { none: 'Does not repeat', weekly: 'Every week', monthly: 'Every month', yearly: 'Every year' };
+interface DeadlineTask { id: string; title: string; due_on: string; due_time: string | null; assignee_id: string | null }
+
+/** A job's deadline as a calendar entry ("✅ Renew the rego", by its time or all day). */
+export function deadlineEvent(t: DeadlineTask): CalEvent {
+  const at = new Date(`${t.due_on}T${t.due_time ? t.due_time.slice(0, 5) : '00:00'}`);
+  return {
+    id: `t:${t.id}`, title: `✅ ${t.title}`, notes: null, location: null, starts_at: at.toISOString(), ends_at: null,
+    all_day: !t.due_time, member_id: t.assignee_id, repeat: 'none', repeat_every: 1, meal_id: null, task: true,
+  };
+}
+
+const COLS = 'id,title,notes,location,starts_at,ends_at,all_day,member_id,repeat,repeat_every,meal_id';
+const REPEAT_LABEL: Record<EventRepeat, string> = { none: 'Does not repeat', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
 
 type View = 'agenda' | 'month';
 
@@ -63,7 +77,13 @@ export function CalendarScreen() {
   const [editingFav, setEditingFav] = useState<Favourite | null>(null);
   const live = useLive<CalEvent[]>('events', hid, ['events'], () =>
     supabase.from('events').select(COLS).eq('household_id', hid!).order('starts_at'));
-  const events = live.data ?? [];
+  // jobs whose deadline is set to show on the calendar
+  const deadlines = useLive<DeadlineTask[]>('cal-deadlines', hid, ['tasks'], () =>
+    supabase.from('tasks').select('id,title,due_on,due_time,assignee_id').eq('household_id', hid!)
+      .eq('in_calendar', true).is('completed_at', null).not('due_on', 'is', null));
+  const events = useMemo(() => [...(live.data ?? []), ...(deadlines.data ?? []).map(deadlineEvent)], [live.data, deadlines.data]);
+  const navigate = useNavigate();
+  const open = (e: CalEvent) => (e.task ? navigate('/tasks', { state: { dir: 'forward', highlight: e.id.slice(2) } }) : setEditing(e));
 
   const agenda = useMemo(() => expandEvents(events, today, addDays(today, 60)), [events, today]);
   const monthEnd = toIso(new Date(parseIso(monthStart).getFullYear(), parseIso(monthStart).getMonth() + 1, 0));
@@ -108,7 +128,7 @@ export function CalendarScreen() {
                 <section key={day}>
                   <h3 className="group-label">{dayLabel(day, today)}</h3>
                   <ul className="list">
-                    {occ.map((o) => <EventRow key={o.event.id + o.day} occ={o} who={memberById(o.event.member_id)} onOpen={() => setEditing(o.event)} />)}
+                    {occ.map((o) => <EventRow key={o.event.id + o.day} occ={o} who={memberById(o.event.member_id)} onOpen={() => open(o.event)} />)}
                   </ul>
                 </section>
               ))
@@ -142,7 +162,7 @@ export function CalendarScreen() {
               <h3 className="group-label" style={{ marginTop: 'var(--s-4)' }}>{dayLabel(selected, today)}</h3>
               {(monthDays[selected] ?? []).length === 0 ? <p className="muted">Nothing on this day.</p> : (
                 <ul className="list">
-                  {monthDays[selected].map((o) => <EventRow key={o.event.id} occ={o} who={memberById(o.event.member_id)} onOpen={() => setEditing(o.event)} />)}
+                  {monthDays[selected].map((o) => <EventRow key={o.event.id} occ={o} who={memberById(o.event.member_id)} onOpen={() => open(o.event)} />)}
                 </ul>
               )}
             </>
@@ -175,15 +195,15 @@ export function CalendarScreen() {
 function EventRow({ occ, who, onOpen }: { occ: Occurrence<CalEvent>; who: Member | null; onOpen: () => void }) {
   const e = occ.event;
   return (
-    <li className="row-item" data-ref={e.id}>
-      <span className="event-time">{eventWhenLabel(e, () => timeLabel(occ.start))}</span>
+    <li className={`row-item${e.task ? ' is-deadline' : ''}`} data-ref={e.id}>
+      <span className="event-time">{e.task ? (e.all_day ? 'Due' : `Due ${timeLabel(occ.start)}`) : eventWhenLabel(e, () => timeLabel(occ.start))}</span>
       <button type="button" className="row-main" onClick={onOpen}>
         <span className="row-title">{e.title}</span>
         {(e.location || e.repeat !== 'none' || (!e.all_day && occ.end)) && (
           <span className="row-meta">
             {!e.all_day && occ.end && <span>until {timeLabel(occ.end)}</span>}
             {e.location && <span><MapPin size={14} /> {e.location}</span>}
-            {e.repeat !== 'none' && <span><Repeat size={14} /> {REPEAT_LABEL[e.repeat]}</span>}
+            {e.repeat !== 'none' && <span><Repeat size={14} /> {repeatText(e.repeat, e.repeat_every)}</span>}
           </span>
         )}
       </button>
@@ -212,6 +232,7 @@ function EventSheet({ event, newOn, householdId, myId, members, favourites, onCl
   const [to, setTo] = useState(end?.time ?? '');
   const [who, setWho] = useState<string | null>(event ? event.member_id : null);
   const [repeat, setRepeat] = useState<EventRepeat>(event?.repeat ?? 'none');
+  const [every, setEvery] = useState(event?.repeat_every ?? 1);
   const [location, setLocation] = useState(event?.location ?? '');
   const [notes, setNotes] = useState(event?.notes ?? '');
   const [busy, setBusy] = useState(false);
@@ -227,7 +248,7 @@ function EventSheet({ event, newOn, householdId, myId, members, favourites, onCl
     setBusy(true);
     const row = {
       title: title.trim(), starts_at: startsAt.toISOString(), ends_at: endsAt ? endsAt.toISOString() : null,
-      all_day: allDay, member_id: who, repeat, location: location.trim() || null, notes: notes.trim() || null,
+      all_day: allDay, member_id: who, repeat, repeat_every: repeat === 'none' ? 1 : every, location: location.trim() || null, notes: notes.trim() || null,
     };
     const { error } = event
       ? await supabase.from('events').update(row).eq('id', event.id)
@@ -268,6 +289,22 @@ function EventSheet({ event, newOn, householdId, myId, members, favourites, onCl
             </select>
           </div>
         </div>
+        {repeat !== 'none' && (
+          <div className="field">
+            <label htmlFor="e-every">How often</label>
+            <div className="repeat-every">
+              <span>Every</span>
+              <input id="e-every" type="number" inputMode="numeric" min={1} max={52} value={every}
+                onChange={(e) => setEvery(Math.max(1, Math.min(52, Math.round(Number(e.target.value) || 1))))} />
+              <span>{repeat === 'weekly' ? (every === 1 ? 'week' : 'weeks') : repeat === 'monthly' ? (every === 1 ? 'month' : 'months') : (every === 1 ? 'year' : 'years')}</span>
+            </div>
+            <div className="chips">
+              {[1, 2, 3, 4, 6].map((n) => (
+                <button key={n} type="button" className="chip-btn plain" aria-pressed={every === n} onClick={() => setEvery(n)}>{repeatText(repeat, n)}</button>
+              ))}
+            </div>
+          </div>
+        )}
         <label className="check">
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
           <span>All day (birthdays, holidays)</span>

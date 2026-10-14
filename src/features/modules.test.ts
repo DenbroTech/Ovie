@@ -7,7 +7,7 @@ vi.mock('../lib/supabase', () => ({ supabase: {}, configError: null }));
 
 const task = (over: Partial<Task>): Task => ({
   id: Math.random().toString(36), household_id: 'h', title: 't', notes: null, assignee_id: null, priority: 0,
-  due_on: null, repeat_every: null, repeat_unit: null, completed_at: null, completed_by: null, created_at: '2026-10-01T00:00:00Z', reward_points: null, reward_text: null, ...over,
+  due_on: null, repeat_every: null, repeat_unit: null, completed_at: null, completed_by: null, created_at: '2026-10-01T00:00:00Z', reward_points: null, reward_text: null, due_time: null, in_calendar: false, remind: false, ...over,
 });
 
 describe('tasks', () => {
