@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react';
-import { Plus, Repeat, Star, Trash2, Undo2, Check } from 'lucide-react';
+import { Gift, Plus, Repeat, Star, Trash2, Undo2, Check } from 'lucide-react';
 import { Screen } from '../../components/Screen';
 import { Sheet } from '../../components/Sheet';
 import { PersonPicker, WhoBadge } from '../../components/PersonPicker';
@@ -28,9 +28,12 @@ export interface Task {
   completed_at: string | null;
   completed_by: string | null;
   created_at: string;
+  /** Oviemeter points for whoever does it (1-10), and/or a treat in words */
+  reward_points: number | null;
+  reward_text: string | null;
 }
 
-const COLS = 'id,household_id,title,notes,assignee_id,priority,due_on,repeat_every,repeat_unit,completed_at,completed_by,created_at';
+const COLS = 'id,household_id,title,notes,assignee_id,priority,due_on,repeat_every,repeat_unit,completed_at,completed_by,created_at,reward_points,reward_text';
 
 type View = 'todo' | 'done';
 type Who = 'all' | string;
@@ -104,7 +107,9 @@ export function TasksScreen() {
     setBusyId(null);
     if (error) { toast(friendlyError(error), 'error'); void live.reload(); return; }
     reactSheep('celebrating');
-    toast(next ? `Done. Next one is ${t.repeat_unit === 'day' && t.repeat_every === 1 ? 'tomorrow' : 'scheduled'}.` : 'Done');
+    const earner = me?.id ?? t.assignee_id;
+    const reward = rewardWords(t, earner ? (earner === me?.id ? 'you' : members.find((m) => m.id === earner)?.display_name ?? null) : null);
+    toast([next ? `Done. Next one is ${t.repeat_unit === 'day' && t.repeat_every === 1 ? 'tomorrow' : 'scheduled'}.` : 'Done!', reward].filter(Boolean).join(' '));
     void live.reload();
   }
 
@@ -210,10 +215,30 @@ function TaskRow({ task, today, who, busy, onTick, onOpen }: {
             {rep && <span><Repeat size={14} /> {rep}</span>}
           </span>
         )}
+        {(task.reward_points || task.reward_text) && <RewardLine task={task} />}
       </button>
       <WhoBadge member={who} />
     </li>
   );
+}
+
+const REWARD_POINTS = [1, 2, 3, 5, 10];
+
+/** "🎁 +2 on the Oviemeter · Pick the movie" */
+function RewardLine({ task }: { task: Task }) {
+  return (
+    <span className="row-meta task-reward">
+      <Gift size={14} /> {[task.reward_points ? `+${task.reward_points} 😇` : null, task.reward_text].filter(Boolean).join(' · ')}
+    </span>
+  );
+}
+
+/** What ticking it off earned, for the toast. */
+export function rewardWords(t: Pick<Task, 'reward_points' | 'reward_text'>, earner: string | null): string {
+  const parts: string[] = [];
+  if (t.reward_points) parts.push(earner ? `+${t.reward_points} on the Oviemeter for ${earner} 😇` : `(set who it’s for to earn the +${t.reward_points})`);
+  if (t.reward_text) parts.push(`Treat: ${t.reward_text} 🎁`);
+  return parts.join(' · ');
 }
 
 const REPEATS: Array<{ label: string; every: number | null; unit: RepeatUnit | null }> = [
@@ -237,6 +262,8 @@ function TaskSheet({ task, householdId, today, myId, onClose, onSaved }: {
   const [important, setImportant] = useState(task?.priority === 1);
   const initialRepeat = REPEATS.findIndex((r) => r.every === (task?.repeat_every ?? null) && r.unit === (task?.repeat_unit ?? null));
   const [repeatIdx, setRepeatIdx] = useState(initialRepeat < 0 ? 0 : initialRepeat);
+  const [rewardPoints, setRewardPoints] = useState<number | null>(task?.reward_points ?? null);
+  const [rewardText, setRewardText] = useState(task?.reward_text ?? '');
   const [busy, setBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -248,6 +275,7 @@ function TaskSheet({ task, householdId, today, myId, onClose, onSaved }: {
     const row = {
       title: title.trim(), notes: notes.trim() || null, assignee_id: assignee, due_on: due || null,
       priority: important ? 1 : 0, repeat_every: repeat.every, repeat_unit: repeat.unit,
+      reward_points: rewardPoints, reward_text: rewardText.trim() || null,
     };
     const { error } = task
       ? await supabase.from('tasks').update(row).eq('id', task.id)
@@ -291,6 +319,18 @@ function TaskSheet({ task, householdId, today, myId, onClose, onSaved }: {
           <input type="checkbox" checked={important} onChange={(e) => setImportant(e.target.checked)} />
           <span>Important</span>
         </label>
+        <div className="field">
+          <span className="field-label"><Gift size={16} /> Reward (optional)</span>
+          <div className="meter-pick" role="radiogroup" aria-label="Oviemeter points">
+            <button type="button" role="radio" aria-checked={rewardPoints === null} className="chip-btn plain" onClick={() => setRewardPoints(null)}>No points</button>
+            {REWARD_POINTS.map((v) => (
+              <button key={v} type="button" role="radio" aria-checked={rewardPoints === v} className="chip-btn plain is-good" onClick={() => setRewardPoints(v)}>😇 +{v}</button>
+            ))}
+          </div>
+          <input aria-label="A treat (optional)" maxLength={120} placeholder="And/or a treat, e.g. Pick the movie tonight"
+            value={rewardText} onChange={(e) => setRewardText(e.target.value)} />
+          <p className="muted small">Points go on the Oviemeter of whoever ticks it off{assignee ? '' : ' (on the wall screen: the person it’s for)'}.</p>
+        </div>
         <div className="field">
           <label htmlFor="t-notes">Notes</label>
           <textarea id="t-notes" maxLength={1000} value={notes} onChange={(e) => setNotes(e.target.value)} />

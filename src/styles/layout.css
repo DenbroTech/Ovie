@@ -697,3 +697,17 @@ section + section > .group-label { margin-top: var(--s-5); }
 .ss-meter-one.is-angel .ss-meter-score strong { color: #7ccf7f; }
 .ss-meter-one.is-devil .ss-meter-score strong { color: #ff7b72; }
 .ss-meter .meter-gauge { color: #f3ede4; margin-top: -4px; }
+
+/* hearts on notes */
+.note-like { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; padding: 6px 10px; border: 0; border-radius: 999px;
+  background: none; color: #2a2622; opacity: 0.55; font: inherit; font-weight: 800; cursor: pointer; }
+.note-like:hover { background: rgb(0 0 0 / 0.06); opacity: 0.8; }
+.note-like.is-mine { color: #e0245e; opacity: 1; }
+.note-like.has-likes { color: #e0245e; opacity: 0.7; }
+.note-like.is-mine svg { animation: heart-pop 300ms var(--ease); }
+@keyframes heart-pop { 50% { transform: scale(1.35); } }
+.note-foot .note-actions { margin-left: 0; }
+.postit-hearts { margin-right: 10px; }
+/* rewards on jobs */
+.task-reward { color: #d18a00; font-weight: 700; }
+.ss-reward { display: block; font-size: 0.6em; font-weight: 800; color: #f5c242; margin-top: 2px; }
