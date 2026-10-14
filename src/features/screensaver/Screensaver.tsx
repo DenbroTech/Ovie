@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarDays, Check, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
+import { CalendarDays, Check, Gauge, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
 import { FitText } from '../../components/FitText';
 import { SHUTDOWN_HELPER_URL } from '../../lib/pi';
 import { eventWhenLabel } from '../../lib/menu';
@@ -20,6 +20,8 @@ import { isRich } from '../notes/Notes';
 import { parseDoodle } from '../../lib/doodle';
 import { notePicture, useNotePictures } from '../../lib/notePictures';
 import { finishedMonths, type MonthTotal, type TrendMonth } from '../../lib/financeChart';
+import { lookOf, METER_COLS, scoreOf, signed, standing, type MeterPoint } from '../../lib/meter';
+import { MeterGauge, MeterSheep } from '../meter/MeterArt';
 
 // ---------- when to show ----------
 
@@ -69,10 +71,10 @@ interface EventLite extends EventLike { title: string; member_id: string | null;
 interface ItemLite { id: string; name: string; qty: string | null; list_id: string }
 
 /** One big panel shows one topic at a time, readable from across the room. Today always comes first. */
-export type SlideId = 'today' | 'jobs' | 'countdown' | 'week' | 'notes' | 'shopping' | 'money' | 'watch';
+export type SlideId = 'today' | 'jobs' | 'countdown' | 'week' | 'notes' | 'meter' | 'shopping' | 'money' | 'watch';
 export const SLIDE_SECONDS = 10;
-// The angel/devil scores (and their reasons) and the What's new list stay off the screensaver: see private.test.ts.
-const ORDER: SlideId[] = ['today', 'jobs', 'countdown', 'week', 'notes', 'shopping', 'money', 'watch'];
+// The What's new list stays off the screensaver (see private.test.ts); the Oviemeter shows scores only, never reasons.
+const ORDER: SlideId[] = ['today', 'jobs', 'countdown', 'week', 'notes', 'meter', 'shopping', 'money', 'watch'];
 
 /** Which topics to cycle through: today always, the rest only when they have something to show. */
 export function slidesToShow(has: Partial<Record<Exclude<SlideId, 'today'>, boolean>>): SlideId[] {
@@ -103,6 +105,8 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
       .order('updated_at', { ascending: false }).limit(8));
   const views = useLive<ViewLite[]>('ss-views', hid, ['viewings'], () =>
     supabase.from('viewings').select('title_id,member_id,season,episode').eq('household_id', hid!).is('member_id', null));
+  const meter = useLive<MeterPoint[]>('ss-meter', hid, ['meter_points'], () =>
+    supabase.from('meter_points').select(METER_COLS).eq('household_id', hid!).order('created_at').limit(500));
   const notes = useLive<NoteLite[]>('ss-notes', hid, ['notes'], () =>
     supabase.from('notes').select('id,body,from_member,to_member,pinned,colour,created_at,image_path,gif_url,doodle').eq('household_id', hid!).is('done_at', null)
       .order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(8));
@@ -157,6 +161,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     jobs: jobsNow.length > 0,
     week: laterOcc.length > 0,
     notes: wallNotes.length > 0,
+    meter: members.length > 1 && meter.data !== null,
     shopping: (items.data ?? []).length > 0,
     countdown: counts.length > 0,
     money: hasMoney,
@@ -213,7 +218,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const cornerMood: SheepMood = night && baseMood === 'sleepy' ? 'sleepy' : ({
     today: baseMood, jobs: 'working', countdown: 'excited', week: 'calendar',
     notes: notesMood(notes.data ?? [], null, now), shopping: shoppingMood((items.data ?? []).length),
-    money: 'finances', watch: 'watch',
+    money: 'finances', watch: 'watch', meter: 'happy',
   } as Record<SlideId, SheepMood>)[slide];
   const shortDay = (day: string) => daysBetween(today, day) === 1 ? 'Tomorrow' : parseIso(day).toLocaleDateString(undefined, { weekday: 'short' });
   const fmtTime = (d: Date) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: tz }).format(d);
@@ -325,6 +330,24 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
                 {(items.data ?? []).slice(0, 6).map((i) => <li key={i.id}><span>{i.name}</span></li>)}
               </ul>
               </FitText>
+            </>
+          )}
+          {slide === 'meter' && (
+            <>
+              <h3><Gauge size={24} /> Oviemeter</h3>
+              <div className="ss-meter">
+                {members.map((m, i) => {
+                  const score = scoreOf(meter.data ?? [], m.id);
+                  return (
+                    <div key={m.id} className={`ss-meter-one is-${standing(score).kind}`}>
+                      <span className="ss-meter-name">{m.display_name}</span>
+                      <MeterSheep score={score} look={lookOf(household?.settings, m.id, i)} size={104} />
+                      <MeterGauge score={score} size={190} />
+                      <span className="ss-meter-score"><strong>{signed(score)}</strong> {standing(score).label}</span>
+                    </div>
+                  );
+                })}
+              </div>
             </>
           )}
           {slide === 'money' && hasMoney && (
