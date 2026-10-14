@@ -15,6 +15,10 @@ import { formatClock, formatLongDate } from '../../lib/time';
 import { addDays, countdowns, daysBetween, expandEvents, money, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
 import { RELEASE_COLS, episodeRelease, nextOutEpisode, upcomingReleases, type ReleaseFields } from '../../lib/releases';
 import { notesForWall, postitColour, postitTilt } from '../../lib/postits';
+import { NoteFace } from '../../components/NoteFace';
+import { isRich } from '../notes/Notes';
+import { parseDoodle } from '../../lib/doodle';
+import { notePicture, useNotePictures } from '../../lib/notePictures';
 import { finishedMonths, type MonthTotal, type TrendMonth } from '../../lib/financeChart';
 
 // ---------- when to show ----------
@@ -60,7 +64,7 @@ export function useIdle(minutes: number): [boolean, () => void] {
 interface TaskLite { id: string; title: string; due_on: string | null; assignee_id: string | null }
 interface TitleLite extends ReleaseFields { id: string; name: string; seasons: number[]; kind: string; status: string }
 interface ViewLite { title_id: string; member_id: string | null; season: number; episode: number }
-interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean; colour: string; created_at: string }
+interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean; colour: string; created_at: string; image_path: string | null; gif_url: string | null; doodle: unknown }
 interface EventLite extends EventLike { title: string; member_id: string | null; location: string | null; meal_id: string | null }
 interface ItemLite { id: string; name: string; qty: string | null; list_id: string }
 
@@ -99,7 +103,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const views = useLive<ViewLite[]>('ss-views', hid, ['viewings'], () =>
     supabase.from('viewings').select('title_id,member_id,season,episode').eq('household_id', hid!).is('member_id', null));
   const notes = useLive<NoteLite[]>('ss-notes', hid, ['notes'], () =>
-    supabase.from('notes').select('id,body,from_member,to_member,pinned,colour,created_at').eq('household_id', hid!).is('done_at', null)
+    supabase.from('notes').select('id,body,from_member,to_member,pinned,colour,created_at,image_path,gif_url,doodle').eq('household_id', hid!).is('done_at', null)
       .order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(8));
   const items = useLive<ItemLite[]>('ss-items', hid, ['shopping_items'], () =>
     supabase.from('shopping_items').select('id,name,qty,list_id').eq('household_id', hid!).is('cleared_at', null).is('checked_at', null)
@@ -374,20 +378,26 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
  *  (the rest take their turn the next time Notes comes round). */
 const NOTE_MIN_PX = 20;
 function WallNotes({ notes, round, name }: {
-  notes: Array<{ id: string; body: string; colour: string; from_member: string | null }>;
+  notes: NoteLite[];
   round: number;
   name: (id: string | null) => string | undefined;
 }) {
+  const urls = useNotePictures(notes.map((n) => n.image_path));
   const [cap, setCap] = useState(notes.length);
-  const start = notes.length > cap ? (round * cap) % notes.length : 0;
-  const shown = [...notes.slice(start), ...notes.slice(0, start)].slice(0, cap);
+  // a note with a picture or drawing gets the slide to itself; written notes share it, as many as fit
+  const plain = notes.filter((n) => !isRich(n));
+  const pages: NoteLite[][] = [...notes.filter(isRich).map((n) => [n])];
+  for (let i = 0; i < plain.length; i += Math.max(1, cap)) pages.push(plain.slice(i, i + Math.max(1, cap)));
+  const shown = pages.length ? pages[round % pages.length] : [];
   const onFit = useCallback((fits: boolean) => { if (!fits) setCap((c) => Math.max(1, c - 1)); }, []);
   const max = shown.length === 1 ? 56 : shown.length === 2 ? 42 : 32;
   return (
     <div className={`ss-postits ss-postits-${shown.length}`}>
       {shown.map((n) => (
-        <div key={n.id} className={`postit postit-${postitColour(n.colour)}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
-          <FitText className="postit-body" max={max} min={NOTE_MIN_PX} onFit={onFit}>{n.body}</FitText>
+        <div key={n.id} className={`postit postit-${postitColour(n.colour)}${isRich(n) ? ' postit-rich' : ''}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
+          {isRich(n)
+            ? <div className="postit-face-box"><NoteFace body={n.body} picture={notePicture(n, urls)} doodle={parseDoodle(n.doodle)} /></div>
+            : <FitText className="postit-body" max={max} min={NOTE_MIN_PX} onFit={onFit}>{n.body}</FitText>}
           {name(n.from_member) && <p className="postit-from">— {name(n.from_member)}</p>}
         </div>
       ))}

@@ -53,7 +53,7 @@ describe('finances', () => {
 });
 
 describe('notes', () => {
-  const note = (over: Partial<Note>): Note => ({ id: Math.random().toString(36), body: 'x', from_member: null, to_member: null, colour: 'sand', pinned: false, done_at: null, created_at: '2026-10-01T00:00:00Z', ...over });
+  const note = (over: Partial<Note>): Note => ({ id: Math.random().toString(36), body: 'x', from_member: null, to_member: null, colour: 'sand', pinned: false, done_at: null, created_at: '2026-10-01T00:00:00Z', image_path: null, gif_url: null, doodle: null, ...over });
   it('shows pinned notes first, then newest', () => {
     const sorted = sortNotes([
       note({ body: 'old', created_at: '2026-10-01T00:00:00Z' }),

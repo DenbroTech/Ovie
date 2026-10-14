@@ -61,6 +61,21 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // GIFs on notes: keep a copy so they still show offline.
+  if (/^(media[0-9]?\.giphy\.com|i\.giphy\.com|static\.klipy\.com)$/.test(url.hostname)) {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(PHOTOS);
+        const hit = await cache.match(req.url);
+        if (hit) return hit;
+        const res = await fetch(req);
+        if (res.ok || res.type === 'opaque') cache.put(req.url, res.clone());
+        return res;
+      })(),
+    );
+    return;
+  }
+
   if (url.origin !== self.location.origin) return;
 
   if (url.pathname.startsWith(BASE + 'sheep/') || url.pathname.startsWith(BASE + 'icons/') || url.pathname === BASE + 'favicon.png') {
