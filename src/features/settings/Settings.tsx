@@ -12,6 +12,7 @@ import { SCREENSAVER_CHOICES, screensaverMinutes, setScreensaverMinutes } from '
 import { supabase } from '../../lib/supabase';
 import { DEFAULT_FRAME, FRAME_MAX, FRAME_STEP, setFrame, storedFrame, type FrameEdge } from '../../lib/frame';
 import { friendlyError } from '../../lib/errors';
+import { gifKeyFrom, type GifProvider } from '../../lib/gifs';
 import { MEMBER_COLOURS, type Device, type Member, type ThemePref } from '../../lib/types';
 
 function timeZones(): string[] {
@@ -32,9 +33,8 @@ function lastSeen(iso: string): string {
 }
 
 /** The Pi kiosk's local helper (scripts/pi/helper.py) — only reachable on the Pi itself. */
-export const DESKTOP_HELPER_URL = 'http://127.0.0.1:8765/exit';
-export const SHUTDOWN_HELPER_URL = 'http://127.0.0.1:8765/shutdown';
-export const RESTART_HELPER_URL = 'http://127.0.0.1:8765/restart';
+import { DESKTOP_HELPER_URL, RESTART_HELPER_URL, SHUTDOWN_HELPER_URL } from '../../lib/pi';
+export { DESKTOP_HELPER_URL, RESTART_HELPER_URL, SHUTDOWN_HELPER_URL };
 
 type Confirm =
   | { kind: 'desktop' }
@@ -155,6 +155,7 @@ export function SettingsScreen() {
             onClick={() => setConfirm({ kind: 'unpair', device: thisDevice, self: true })}>
             <Unlink size={20} /> Remove this device from Ovie
           </button>
+          <ConnectionLine />
           <p className="muted small">Ovie version {__BUILD_ID__}</p>
         </section>
 
@@ -235,6 +236,9 @@ export function SettingsScreen() {
             <span className="hint">Type this on a new phone or screen to add it. Keep it private: it is the key to your home's data.</span>
           </div>
         </section>
+
+        <GifKeyCard settings={household.settings} disabled={disabled}
+          onSave={(patch, msg) => run(() => supabase.from('households').update({ settings: { ...household.settings, ...patch } }).eq('id', household.id), msg)} />
 
         <section className="card stack" aria-labelledby="devs-h">
           <h2 id="devs-h">Devices</h2>
@@ -389,5 +393,50 @@ function FrameFit() {
         <button type="button" className="btn-link" onClick={() => setLocal(setFrame(DEFAULT_FRAME))}>Reset</button>
       </span>
     </div>
+  );
+}
+
+/** A quiet status line instead of a banner: Ovie keeps working offline and catches up later. */
+/** A free GIPHY or KLIPY key lets notes search GIFs. Saved for the whole household. */
+function GifKeyCard({ settings, disabled, onSave }: {
+  settings: Record<string, unknown>; disabled: boolean; onSave: (patch: Record<string, unknown>, msg: string) => Promise<boolean>;
+}) {
+  const saved = gifKeyFrom(settings);
+  const [provider, setProvider] = useState<GifProvider>(saved?.provider ?? 'giphy');
+  const [key, setKey] = useState(saved?.key ?? '');
+  const changed = key.trim() !== (saved?.key ?? '') || (!!key.trim() && provider !== (saved?.provider ?? 'giphy'));
+  return (
+    <section className="card stack" aria-labelledby="gif-h">
+      <h2 id="gif-h">GIFs</h2>
+      <p className="muted small">
+        To search GIFs when writing a note, paste a free key from {provider === 'giphy'
+          ? <a href="https://developers.giphy.com/dashboard/" target="_blank" rel="noreferrer">developers.giphy.com</a>
+          : <a href="https://partner.klipy.com/" target="_blank" rel="noreferrer">partner.klipy.com</a>} (make an app, then copy its API key).
+      </p>
+      <div className="segmented" role="group" aria-label="GIF service">
+        <button type="button" aria-pressed={provider === 'giphy'} onClick={() => setProvider('giphy')}>GIPHY</button>
+        <button type="button" aria-pressed={provider === 'klipy'} onClick={() => setProvider('klipy')}>KLIPY</button>
+      </div>
+      <div className="field-inline">
+        <input aria-label="GIF key" placeholder="Paste the API key" autoComplete="off" spellCheck={false} maxLength={120}
+          value={key} onChange={(e) => setKey(e.target.value)} />
+        <button type="button" className="btn btn-primary" disabled={disabled || !changed}
+          onClick={() => void onSave({ gif_key: key.trim() || null, gif_provider: provider }, key.trim() ? 'GIF key saved' : 'GIF key removed')}>Save</button>
+      </div>
+      {saved && <p className="muted small">GIF search is on ({saved.provider === 'klipy' ? 'KLIPY' : 'GIPHY'}).</p>}
+    </section>
+  );
+}
+
+function ConnectionLine() {
+  const { connected, waiting } = useConnection();
+  const changes = `${waiting} change${waiting === 1 ? '' : 's'}`;
+  return (
+    <p className={`connection-line${connected ? '' : ' is-offline'}`} role="status">
+      <span className="connection-dot" aria-hidden="true" />
+      {connected
+        ? waiting ? `Online · sending ${changes}…` : 'Online · everything is up to date'
+        : `Offline · showing the last saved info${waiting ? ` · ${changes} will be sent when it's back online` : '. Changes made now are sent when it’s back online.'}`}
+    </p>
   );
 }

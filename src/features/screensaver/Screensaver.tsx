@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { CalendarDays, Check, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
 import { FitText } from '../../components/FitText';
+import { SHUTDOWN_HELPER_URL } from '../../lib/pi';
 import { eventWhenLabel } from '../../lib/menu';
 import { CroppedPhoto } from '../../components/CroppedPhoto';
 import { OvieSheep, reactSheep, type SheepMood } from '../../components/OvieSheep';
@@ -14,6 +15,10 @@ import { formatClock, formatLongDate } from '../../lib/time';
 import { addDays, countdowns, daysBetween, expandEvents, money, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
 import { RELEASE_COLS, episodeRelease, nextOutEpisode, upcomingReleases, type ReleaseFields } from '../../lib/releases';
 import { notesForWall, postitColour, postitTilt } from '../../lib/postits';
+import { NoteFace } from '../../components/NoteFace';
+import { isRich } from '../notes/Notes';
+import { parseDoodle } from '../../lib/doodle';
+import { notePicture, useNotePictures } from '../../lib/notePictures';
 import { finishedMonths, type MonthTotal, type TrendMonth } from '../../lib/financeChart';
 
 // ---------- when to show ----------
@@ -59,7 +64,7 @@ export function useIdle(minutes: number): [boolean, () => void] {
 interface TaskLite { id: string; title: string; due_on: string | null; assignee_id: string | null }
 interface TitleLite extends ReleaseFields { id: string; name: string; seasons: number[]; kind: string; status: string }
 interface ViewLite { title_id: string; member_id: string | null; season: number; episode: number }
-interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean; colour: string; created_at: string }
+interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean; colour: string; created_at: string; image_path: string | null; gif_url: string | null; doodle: unknown }
 interface EventLite extends EventLike { title: string; member_id: string | null; location: string | null; meal_id: string | null }
 interface ItemLite { id: string; name: string; qty: string | null; list_id: string }
 
@@ -74,7 +79,9 @@ export function slidesToShow(has: Partial<Record<Exclude<SlideId, 'today'>, bool
 }
 
 export function Screensaver({ onWake }: { onWake: () => void }) {
-  const { household, members } = useHousehold();
+  const { household, members, thisDevice } = useHousehold();
+  const isWall = thisDevice?.kind === 'wall';
+  const [askOff, setAskOff] = useState(false);
   const hid = household?.id;
   const tz = household?.timezone;
   const today = todayIso(tz);
@@ -96,7 +103,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const views = useLive<ViewLite[]>('ss-views', hid, ['viewings'], () =>
     supabase.from('viewings').select('title_id,member_id,season,episode').eq('household_id', hid!).is('member_id', null));
   const notes = useLive<NoteLite[]>('ss-notes', hid, ['notes'], () =>
-    supabase.from('notes').select('id,body,from_member,to_member,pinned,colour,created_at').eq('household_id', hid!).is('done_at', null)
+    supabase.from('notes').select('id,body,from_member,to_member,pinned,colour,created_at,image_path,gif_url,doodle').eq('household_id', hid!).is('done_at', null)
       .order('pinned', { ascending: false }).order('created_at', { ascending: false }).limit(8));
   const items = useLive<ItemLite[]>('ss-items', hid, ['shopping_items'], () =>
     supabase.from('shopping_items').select('id,name,qty,list_id').eq('household_id', hid!).is('cleared_at', null).is('checked_at', null)
@@ -229,7 +236,12 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
             <div className="ss-clock">{formatClock(now, tz)}</div>
             <div className="ss-date">{formatLongDate(now, tz)}</div>
           </div>
-          <OvieSheep size={84} reacts mood={cornerMood} />
+          {isWall ? (
+            <button type="button" className="ss-sheep-btn" aria-label="Shut down the Pi"
+              onClick={(e) => { e.stopPropagation(); setAskOff(true); }}>
+              <OvieSheep size={84} reacts mood={cornerMood} />
+            </button>
+          ) : <OvieSheep size={84} reacts mood={cornerMood} />}
         </div>
 
         {/* One topic at a time, in big type */}
@@ -241,6 +253,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               {todayOcc.length === 0 ? <p className="ss-big-quiet">Nothing on today</p> : todayOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id} className="ss-item">
                   <span className="ss-when">{eventWhenLabel(o.event, () => fmtTime(o.start))}</span>{o.event.title}
+                  {!o.event.all_day && o.end && <span className="ss-until">until {fmtTime(o.end)}</span>}
                 </p>
               ))}
               </FitText>
@@ -289,6 +302,9 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               {laterOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id + o.day} className="ss-item">
                   <span className="ss-when">{shortDay(o.day)}</span>{o.event.title}
+                  {!o.event.all_day && !o.event.meal_id && (
+                    <span className="ss-until">{fmtTime(o.start)}{o.end ? ` – ${fmtTime(o.end)}` : ''}</span>
+                  )}
                 </p>
               ))}
               </FitText>
@@ -341,6 +357,19 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
           </div>
         )}
       </div>
+      {askOff && (
+        <div className="ss-ask" role="alertdialog" aria-modal="true" aria-label="Shut down the Pi?" onClick={(e) => { e.stopPropagation(); setAskOff(false); }}>
+          <div className="ss-ask-box" onClick={(e) => e.stopPropagation()}>
+            <OvieSheep size={96} mood="sleepy" title="" />
+            <p className="ss-ask-title">Shut down the Pi?</p>
+            <p className="ss-ask-sub">When the screen goes dark and the green light stops flashing, switch off at the wall.</p>
+            <div className="ss-ask-buttons">
+              <button type="button" className="btn ss-ask-no" onClick={() => setAskOff(false)}>Cancel</button>
+              <button type="button" className="btn ss-ask-yes" onClick={() => { window.location.href = SHUTDOWN_HELPER_URL; }}>Shut down</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -349,20 +378,26 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
  *  (the rest take their turn the next time Notes comes round). */
 const NOTE_MIN_PX = 20;
 function WallNotes({ notes, round, name }: {
-  notes: Array<{ id: string; body: string; colour: string; from_member: string | null }>;
+  notes: NoteLite[];
   round: number;
   name: (id: string | null) => string | undefined;
 }) {
+  const urls = useNotePictures(notes.map((n) => n.image_path));
   const [cap, setCap] = useState(notes.length);
-  const start = notes.length > cap ? (round * cap) % notes.length : 0;
-  const shown = [...notes.slice(start), ...notes.slice(0, start)].slice(0, cap);
+  // a note with a picture or drawing gets the slide to itself; written notes share it, as many as fit
+  const plain = notes.filter((n) => !isRich(n));
+  const pages: NoteLite[][] = [...notes.filter(isRich).map((n) => [n])];
+  for (let i = 0; i < plain.length; i += Math.max(1, cap)) pages.push(plain.slice(i, i + Math.max(1, cap)));
+  const shown = pages.length ? pages[round % pages.length] : [];
   const onFit = useCallback((fits: boolean) => { if (!fits) setCap((c) => Math.max(1, c - 1)); }, []);
   const max = shown.length === 1 ? 56 : shown.length === 2 ? 42 : 32;
   return (
     <div className={`ss-postits ss-postits-${shown.length}`}>
       {shown.map((n) => (
-        <div key={n.id} className={`postit postit-${postitColour(n.colour)}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
-          <FitText className="postit-body" max={max} min={NOTE_MIN_PX} onFit={onFit}>{n.body}</FitText>
+        <div key={n.id} className={`postit postit-${postitColour(n.colour)}${isRich(n) ? ' postit-rich' : ''}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
+          {isRich(n)
+            ? <div className="postit-face-box"><NoteFace body={n.body} picture={notePicture(n, urls)} doodle={parseDoodle(n.doodle)} /></div>
+            : <FitText className="postit-body" max={max} min={NOTE_MIN_PX} onFit={onFit}>{n.body}</FitText>}
           {name(n.from_member) && <p className="postit-from">— {name(n.from_member)}</p>}
         </div>
       ))}

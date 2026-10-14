@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { startUpdateChecks } from './app/updates';
+import { startOutboxSync } from './lib/offline';
 import './styles/tokens.css';
 import './styles/base.css';
 import './styles/layout.css';
@@ -13,3 +14,4 @@ createRoot(document.getElementById('root')!).render(
 );
 
 startUpdateChecks();
+startOutboxSync();

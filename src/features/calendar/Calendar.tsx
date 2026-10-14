@@ -1,5 +1,6 @@
 import { eventWhenLabel } from '../../lib/menu';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, MapPin, Plus, Repeat, Star, Trash2 } from 'lucide-react';
 import { FavouriteChooser, FavouriteDays, FavouriteEdit } from './Favourites';
 import { FAV_COLS, findFavourite, withTime, type Favourite } from '../../lib/favourites';
@@ -44,6 +45,14 @@ export function CalendarScreen() {
   const [monthStart, setMonthStart] = useState(() => today.slice(0, 8) + '01');
   const [selected, setSelected] = useState(today);
   const [editing, setEditing] = useState<CalEvent | { newOn: string } | null>(null);
+  // arriving from "What's new" with a day that isn't in the list ahead: show that day on the month
+  const arrival = (useLocation().state as { day?: string } | null)?.day;
+  useEffect(() => {
+    if (!arrival) return;
+    const d = new Intl.DateTimeFormat('en-CA', { timeZone: household?.timezone }).format(new Date(arrival));
+    if (d >= today && d <= addDays(today, 60)) return;
+    setView('month'); setMonthStart(d.slice(0, 8) + '01'); setSelected(d);
+  }, [arrival]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const favs = useLive<Favourite[]>('event-favourites', hid, ['event_favourites'], () =>
     supabase.from('event_favourites').select(FAV_COLS).eq('household_id', hid!).order('title'));
@@ -161,7 +170,7 @@ export function CalendarScreen() {
 function EventRow({ occ, who, onOpen }: { occ: Occurrence<CalEvent>; who: Member | null; onOpen: () => void }) {
   const e = occ.event;
   return (
-    <li className="row-item">
+    <li className="row-item" data-ref={e.id}>
       <span className="event-time">{eventWhenLabel(e, () => timeLabel(occ.start))}</span>
       <button type="button" className="row-main" onClick={onOpen}>
         <span className="row-title">{e.title}</span>

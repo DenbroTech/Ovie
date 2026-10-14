@@ -167,7 +167,7 @@ export function TasksScreen() {
             done.length === 0 ? <Empty title="Nothing finished yet">Ticked tasks from the last 30 days show here.</Empty> : (
               <ul className="list">
                 {done.map((t) => (
-                  <li key={t.id} className="row-item is-done">
+                  <li key={t.id} data-ref={t.id} className="row-item is-done">
                     <span className="tick" aria-hidden="true" style={{ background: 'var(--accent)', borderColor: 'var(--accent)' }}><Check size={22} color="var(--accent-ink)" /></span>
                     <div className="row-main" style={{ cursor: 'default' }}>
                       <span className="row-title">{t.title}</span>
@@ -200,7 +200,7 @@ function TaskRow({ task, today, who, busy, onTick, onOpen }: {
   const late = task.due_on !== null && task.due_on < today;
   const rep = repeatLabel(task.repeat_every, task.repeat_unit);
   return (
-    <li className="row-item">
+    <li className="row-item" data-ref={task.id}>
       <button type="button" className="tick" role="checkbox" aria-checked={false} aria-label={`Done: ${task.title}`} disabled={busy} onClick={onTick} />
       <button type="button" className="row-main" onClick={onOpen}>
         <span className="row-title">{task.priority === 1 && <Star size={16} className="star" fill="currentColor" aria-label="Important" />} {task.title}</span>

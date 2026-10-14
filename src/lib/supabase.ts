@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { configureOffline, offlineFetch } from './offline';
 
 const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
 const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
@@ -14,6 +15,8 @@ export const supabase: SupabaseClient<any, 'ovie'> = createClient(
   key ?? 'missing',
   {
     db: { schema: 'ovie' },
+    // Offline-first: reads fall back to the copy saved on this device, changes wait in an outbox (lib/offline.ts).
+    global: { fetch: offlineFetch },
     auth: {
       persistSession: true, // the kiosk stays signed in across reboots
       autoRefreshToken: true,
@@ -22,3 +25,6 @@ export const supabase: SupabaseClient<any, 'ovie'> = createClient(
     },
   },
 );
+
+// The outbox is sent with whatever sign-in token is current at the time.
+configureOffline({ token: async () => (await supabase.auth.getSession()).data.session?.access_token ?? null });

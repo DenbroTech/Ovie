@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Check, Eraser, ListPlus, Pencil, Plus, Trash2 } from 'lucide-react';
 import { Screen } from '../../components/Screen';
 import { Sheet } from '../../components/Sheet';
@@ -71,6 +72,12 @@ export function ShoppingScreen() {
   }, [current]);
 
   const all = items.data ?? [];
+  // arriving from "What's new": open the list the item is on
+  const highlight = (useLocation().state as { highlight?: string } | null)?.highlight;
+  useEffect(() => {
+    const it = highlight ? all.find((x) => x.id === highlight) : undefined;
+    if (it?.list_id) setListId(it.list_id);
+  }, [highlight, all.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const here = all.filter((i) => i.list_id === current?.id && !i.cleared_at);
   const toBuy = here.filter((i) => !i.checked_at);
   const ticked = here.filter((i) => i.checked_at).sort((a, b) => (a.checked_at! < b.checked_at! ? 1 : -1));
@@ -201,7 +208,7 @@ export function ShoppingScreen() {
 function ItemRow({ item, disabled, onToggle, onEdit }: { item: Item; disabled: boolean; onToggle: () => void; onEdit: () => void }) {
   const done = !!item.checked_at;
   return (
-    <li className={`row-item shop-item${done ? ' is-done' : ''}`}>
+    <li className={`row-item shop-item${done ? ' is-done' : ''}`} data-ref={item.id}>
       <button type="button" className="row-main shop-tap" role="checkbox" aria-checked={done} disabled={disabled} onClick={onToggle}>
         <span className="tick" aria-hidden="true" data-on={done}>{done && <Check size={24} />}</span>
         <span>

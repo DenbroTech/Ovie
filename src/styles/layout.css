@@ -570,3 +570,86 @@ section + section > .group-label { margin-top: var(--s-5); }
 .fav-time-row input { min-width: 0; }
 .star-btn.is-on { border-color: #d9a43a; background: color-mix(in srgb, #d9a43a 14%, var(--surface)); }
 .star-btn svg { color: #d9a43a; }
+
+/* quiet connection status (Settings) */
+.connection-line { display: flex; align-items: baseline; gap: var(--s-2); margin: 0; font-size: var(--fs-sm); font-weight: 700; color: var(--text-2); }
+.connection-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #4fa86a; transform: translateY(1px); }
+.connection-line.is-offline .connection-dot { background: #d9a43a; }
+
+/* screensaver: tap Ovie to shut down the Pi (asks first) */
+.ss-sheep-btn { background: none; border: 0; padding: 0; cursor: pointer; border-radius: 50%; }
+.ss-ask { position: absolute; inset: 0; z-index: 5; display: grid; place-items: center; background: rgb(0 0 0 / 0.6); }
+.ss-ask-box { display: grid; justify-items: center; gap: 12px; background: #221f1b; color: #efe7da; border-radius: 24px; padding: 28px 36px; max-width: 560px; text-align: center; }
+.ss-ask-title { margin: 0; font-size: 2.2rem; font-weight: 900; }
+.ss-ask-sub { margin: 0; font-size: 1.15rem; font-weight: 600; color: #b9ae9f; }
+.ss-ask-buttons { display: flex; gap: 16px; margin-top: 8px; }
+.ss-ask-buttons .btn { min-height: 72px; min-width: 180px; font-size: 1.5rem; font-weight: 900; border-radius: 18px; }
+.ss-ask-no { background: #3a352f; color: #efe7da; border: 0; }
+.ss-ask-yes { background: #c4554d; color: #fff; border: 0; }
+/* screensaver calendar: time / end time as a line under the entry */
+.ss-until { display: block; font-size: 0.6em; font-weight: 700; color: #9f9585; margin-top: 0.05em; font-variant-numeric: tabular-nums; }
+
+/* ---------- notes: pictures, GIFs and drawings ---------- */
+/* The square face: everything inside is sized in cqw (share of the width), so a drawing lines up at any size. */
+.note-face { position: relative; width: 100%; aspect-ratio: 1; container-type: inline-size; overflow: hidden; border-radius: 2px; }
+.note-face-inner { position: absolute; inset: 0; padding: 5cqw; display: flex; flex-direction: column; gap: 3cqw; }
+.note-face-text { margin: 0; flex: none; max-height: 100%; overflow: hidden; font-weight: 800; line-height: 1.15; white-space: pre-wrap; overflow-wrap: anywhere; color: #2a2622; }
+.note-face-pic { flex: 1; min-height: 0; width: 100%; object-fit: contain; border-radius: 2cqw; }
+.note-doodle { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.note-preview { width: min(100%, 260px); margin: 0 auto; box-shadow: var(--shadow-1); }
+.note-pic-row { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+.field-inline { display: flex; gap: var(--s-2); align-items: center; }
+.field-inline input { flex: 1; min-width: 0; }
+.sheet .segmented { margin-bottom: var(--s-2); }
+.sheet .segmented button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+
+.doodle-pad { display: grid; gap: var(--s-2); }
+.doodle-tools { display: flex; flex-wrap: wrap; gap: var(--s-2); align-items: center; justify-content: center; }
+.doodle-tool { width: 44px; height: 44px; border-radius: 12px; border: 2px solid var(--border); background: var(--surface); color: var(--text);
+  display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.doodle-tool[aria-checked='true'], .doodle-tool[aria-pressed='true'] { border-color: var(--text); background: var(--surface-2); }
+.doodle-tool:disabled { opacity: 0.35; cursor: default; }
+.doodle-colours, .doodle-sizes { display: flex; gap: 6px; }
+.doodle-colour { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); cursor: pointer; }
+.doodle-colour[aria-checked='true'] { outline: 3px solid var(--text); outline-offset: 2px; }
+.doodle-size-dot { display: block; border-radius: 50%; background: currentColor; }
+.doodle-surface { width: min(100%, 440px); margin: 0 auto; touch-action: none; cursor: crosshair; user-select: none; -webkit-user-select: none;
+  box-shadow: var(--shadow-1); }
+
+.gif-picker { display: grid; gap: var(--s-2); margin-top: var(--s-2); }
+.gif-search { display: flex; align-items: center; gap: var(--s-2); }
+.gif-search input { flex: 1; min-width: 0; }
+.gif-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; max-height: 300px; overflow-y: auto; }
+.gif-btn { padding: 0; border: 0; background: var(--surface-2); border-radius: 8px; overflow: hidden; aspect-ratio: 1; cursor: pointer; }
+.gif-btn img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gif-credit { text-align: right; margin: 0; }
+
+/* screensaver: a note with a picture or drawing shows its square face as big as the slot allows */
+.postit-rich { padding: 8px; }
+.postit-face-box { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; container-type: size; }
+.postit-face-box .note-face { width: min(100cqw, 100cqh); }
+
+/* ---------- What's new ---------- */
+.activity-bell { position: relative; flex: none; }
+.activity-badge { position: absolute; top: 2px; right: 0; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+  background: #e53935; color: #fff; font-size: 13px; font-weight: 800; line-height: 22px; text-align: center;
+  box-shadow: 0 0 0 2px var(--bg); pointer-events: none; }
+.home-bell { margin-left: auto; }
+.screen-actions { display: flex; align-items: center; gap: var(--s-2); }
+.activity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.activity-item { width: 100%; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-2); border: 0; border-radius: 12px;
+  background: none; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.activity-item:hover { background: var(--surface-2); }
+.activity-item.is-unread { background: color-mix(in srgb, #e53935 8%, transparent); }
+.activity-text { flex: 1; min-width: 0; display: grid; gap: 2px; overflow-wrap: anywhere; }
+.activity-new { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #e53935; }
+.activity-dot-you { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; }
+
+/* the thing you came to see glows for a moment */
+.flash-found { animation: flash-found 2.4s ease-out; }
+@keyframes flash-found {
+  0%, 30% { box-shadow: 0 0 0 4px #e53935, 0 0 24px 4px rgb(229 57 53 / 0.45); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+:root[data-device='wall'] .home-bell svg { width: 34px; height: 34px; }
+:root[data-device='wall'] .activity-badge { min-width: 26px; height: 26px; line-height: 26px; font-size: 15px; }
