@@ -1,8 +1,10 @@
 /* ---------- shell & page slides ---------- */
 .shell { min-height: 100%; display: flex; flex-direction: column; overflow-x: hidden; }
 .page { flex: 1; display: flex; flex-direction: column; }
-.slide-forward { animation: slide-in-right var(--slide-ms) var(--ease) both; }
-.slide-back { animation: slide-in-left var(--slide-ms) var(--ease) both; }
+/* backwards, not both: a finished slide must let go of the page, or every pop-up inside it gets pinned to the
+   bottom of the page (a kept transform makes position:fixed follow the page) and you have to scroll down to it */
+.slide-forward { animation: slide-in-right var(--slide-ms) var(--ease) backwards; }
+.slide-back { animation: slide-in-left var(--slide-ms) var(--ease) backwards; }
 @keyframes slide-in-right { from { transform: translateX(28%); opacity: 0; } to { transform: none; opacity: 1; } }
 @keyframes slide-in-left { from { transform: translateX(-28%); opacity: 0; } to { transform: none; opacity: 1; } }
 
@@ -166,18 +168,18 @@
 .person-tile-icon { width: 64px; height: 64px; background: var(--surface-2); color: var(--text-2); }
 
 /* ---------- shared module UI ---------- */
-.sheet-overlay { align-items: end; padding: 0; }
-@media (min-width: 640px) { .sheet-overlay { align-items: center; padding: var(--s-4); } }
+/* every add / change form is a window in the middle of the screen */
+.sheet-overlay { align-items: center; padding: var(--s-3); }
+@media (min-width: 640px) { .sheet-overlay { padding: var(--s-4); } }
 .sheet {
-  width: min(560px, 100%); max-height: calc(var(--app-h, 100dvh) * 0.92); display: flex; flex-direction: column;
-  background: var(--surface); border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: var(--shadow-2);
+  width: min(560px, 100%); max-height: calc(var(--app-h, 100dvh) - 2 * var(--s-3)); display: flex; flex-direction: column;
+  background: var(--surface); border-radius: var(--r-lg); box-shadow: var(--shadow-2);
   animation: sheet-up 220ms var(--ease) both;
 }
-@media (min-width: 640px) { .sheet { border-radius: var(--r-lg); } }
-@keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } }
+@keyframes sheet-up { from { transform: scale(0.96); opacity: 0; } }
 .sheet-head { display: flex; align-items: center; gap: var(--s-2); padding: var(--s-4) var(--s-4) var(--s-2) var(--s-5); }
 .sheet-head h2 { flex: 1; font-size: var(--fs-lg); }
-.sheet-body { padding: var(--s-2) var(--s-5); overflow: auto; display: grid; gap: var(--s-4); }
+.sheet-body { flex: 1; min-height: 0; padding: var(--s-2) var(--s-5); overflow: auto; display: grid; gap: var(--s-4); align-content: start; }
 .sheet-foot {
   display: flex; flex-wrap: wrap; gap: var(--s-2); padding: var(--s-4) var(--s-5);
   padding-bottom: max(var(--s-4), env(safe-area-inset-bottom)); border-top: 1px solid var(--border);
