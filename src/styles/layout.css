@@ -685,3 +685,13 @@ section + section > .group-label { margin-top: var(--s-5); }
 .meter-log-main { cursor: default; }
 .cal-alarms { margin-left: auto; white-space: nowrap; text-decoration: none; }
 :root[data-device='wall'] .meter-grid { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+
+/* screensaver: both Oviemeters side by side */
+.ss-meter { flex: 1; min-height: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 16px; align-items: center; }
+.ss-meter-one { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0; }
+.ss-meter-name { font-size: 1.6rem; font-weight: 800; }
+.ss-meter-score { font-size: 1.2rem; font-weight: 700; opacity: 0.9; }
+.ss-meter-score strong { font-size: 2rem; margin-right: 4px; }
+.ss-meter-one.is-angel .ss-meter-score strong { color: #7ccf7f; }
+.ss-meter-one.is-devil .ss-meter-score strong { color: #ff7b72; }
+.ss-meter .meter-gauge { color: #f3ede4; margin-top: -4px; }

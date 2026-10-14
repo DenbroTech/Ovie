@@ -67,7 +67,7 @@ describe('notes', () => {
 import { slidesToShow } from './screensaver/Screensaver';
 describe('screensaver slides', () => {
   it('one big panel: today first, and skips empty topics', () => {
-    expect(slidesToShow({ jobs: true, countdown: true, shopping: true, money: false, watch: true })).toEqual(['today', 'jobs', 'countdown', 'shopping', 'watch']);
+    expect(slidesToShow({ jobs: true, countdown: true, meter: true, shopping: true, money: false, watch: true })).toEqual(['today', 'jobs', 'countdown', 'meter', 'shopping', 'watch']);
     expect(slidesToShow({})).toEqual(['today']);
   });
 });
