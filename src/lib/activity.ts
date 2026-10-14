@@ -2,7 +2,7 @@
  *  grouped when someone does lots of the same thing at once, and linked to where the change is. */
 
 export type ActivityKind = 'task' | 'shopping' | 'note' | 'event' | 'meal' | 'title' | 'viewing' | 'photo' | 'meter';
-export type ActivityAction = 'added' | 'changed' | 'done' | 'undone' | 'deleted';
+export type ActivityAction = 'added' | 'changed' | 'done' | 'undone' | 'deleted' | 'liked';
 
 export interface ActivityRow {
   id: number;
@@ -81,6 +81,7 @@ export function describe(rows: ActivityRow[], meId: string | null, timeZone?: st
       const what = r.title ? `: ${q(r.title)}` : info.picture ? ' with a picture' : info.drawing ? ' with a drawing' : '';
       if (r.action === 'added') return `${forMe ? 'left you a note' : 'left a note'}${what}`;
       if (r.action === 'done') return `took a note off the board${what}`;
+      if (r.action === 'liked') return `❤️ liked ${meId && info.note_from === meId ? 'your' : 'a'} note${what}`;
       return `changed a note${what}`;
     }
     case 'event': {
@@ -110,6 +111,8 @@ export function describe(rows: ActivityRow[], meId: string | null, timeZone?: st
       const to = typeof info.to_member === 'string' ? info.to_member : null;
       const target = to && to === meId ? 'you' : nameOf(to) ?? 'someone';
       const why = r.title ? `: ${q(r.title)}` : '';
+      // points from a job's reward: say who earned them
+      if (info.task && pts > 0) return `earned +${pts} on the Oviemeter 😇 for doing ${q(r.title.replace(/^Did the job: /, ''))}`;
       return pts > 0
         ? `gave ${target} +${pts} on the Oviemeter 😇${why}`
         : `took ${-pts} point${pts === -1 ? '' : 's'} off ${target} on the Oviemeter 😈${why}`;
@@ -137,7 +140,9 @@ export function activityItems(rows: ActivityRow[], opts: {
     const r = g[0];
     const mine = !!opts.myUserId && r.actor_user === opts.myUserId;
     // on the wall screen the giver is picked, so name them rather than the device
-    const giver = r.kind === 'meter' && typeof r.info?.from_member === 'string' ? r.info.from_member : null;
+    const giver = r.kind !== 'meter' ? null
+      : r.info?.task && typeof r.info.to_member === 'string' ? r.info.to_member // a job's reward: the person who earned it
+      : typeof r.info?.from_member === 'string' ? r.info.from_member : null;
     const person = opts.memberName(giver ?? r.actor_member);
     const who = mine ? 'You' : person?.name ?? opts.deviceName(r.actor_device) ?? 'Someone';
     const day = (r.kind === 'event' || r.kind === 'meal') && typeof r.info?.starts_at === 'string' ? r.info.starts_at : undefined;

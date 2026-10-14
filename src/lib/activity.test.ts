@@ -65,3 +65,17 @@ describe('Oviemeter in what’s new', () => {
     expect(it1.path).toBe('/oviemeter');
   });
 });
+
+describe('rewards and hearts in what’s new', () => {
+  it('says who earned a job’s reward', () => {
+    const names = (id: string | null) => (id === 'm-l' ? 'Lina' : null);
+    const [it1] = activityItems([row({ kind: 'meter', title: 'Did the job: Bins out', info: { points: 3, to_member: 'm-l', from_member: 'm-a', task: 't1' } })],
+      { ...opts, memberName: (id) => (names(id) ? { name: names(id)!, colour: 'clay' } : null) });
+    expect(it1.who).toBe('Lina');
+    expect(it1.text).toBe('earned +3 on the Oviemeter 😇 for doing “Bins out”');
+  });
+  it('says when someone liked your note', () => {
+    expect(say([row({ kind: 'note', action: 'liked', title: 'Dinner in the fridge', info: { note_from: 'm-a' } })], 'm-a')).toBe('❤️ liked your note: “Dinner in the fridge”');
+    expect(say([row({ kind: 'note', action: 'liked', title: '', info: { note_from: 'm-l', picture: true } })], 'm-a')).toBe('❤️ liked a note with a picture');
+  });
+});

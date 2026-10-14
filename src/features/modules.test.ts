@@ -7,7 +7,7 @@ vi.mock('../lib/supabase', () => ({ supabase: {}, configError: null }));
 
 const task = (over: Partial<Task>): Task => ({
   id: Math.random().toString(36), household_id: 'h', title: 't', notes: null, assignee_id: null, priority: 0,
-  due_on: null, repeat_every: null, repeat_unit: null, completed_at: null, completed_by: null, created_at: '2026-10-01T00:00:00Z', ...over,
+  due_on: null, repeat_every: null, repeat_unit: null, completed_at: null, completed_by: null, created_at: '2026-10-01T00:00:00Z', reward_points: null, reward_text: null, ...over,
 });
 
 describe('tasks', () => {
@@ -95,5 +95,14 @@ describe('screensaver: countdowns', () => {
   it('counts down to the next special things, skipping weekly ones and today', () => {
     const c = countdowns([ev('yoga', '2026-10-03T09:00:00', 'weekly'), ev('bday', '2025-10-16T00:00:00', 'yearly'), ev('trip', '2026-12-20T00:00:00'), ev('today', '2026-10-11T00:00:00')], '2026-10-11');
     expect(c.map((x) => [x.event.id, x.days])).toEqual([['bday', 5], ['trip', 70]]);
+  });
+});
+
+import { rewardWords } from './tasks/Tasks';
+describe('job rewards', () => {
+  it('says what ticking it off earned', () => {
+    expect(rewardWords({ reward_points: 2, reward_text: 'Pick the movie' }, 'you')).toBe('+2 on the Oviemeter for you 😇 · Treat: Pick the movie 🎁');
+    expect(rewardWords({ reward_points: 3, reward_text: null }, null)).toBe('(set who it’s for to earn the +3)');
+    expect(rewardWords({ reward_points: null, reward_text: null }, 'you')).toBe('');
   });
 });

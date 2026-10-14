@@ -63,7 +63,7 @@ export function useIdle(minutes: number): [boolean, () => void] {
 
 // ---------- what to show ----------
 
-interface TaskLite { id: string; title: string; due_on: string | null; assignee_id: string | null }
+interface TaskLite { id: string; title: string; due_on: string | null; assignee_id: string | null; reward_points: number | null; reward_text: string | null }
 interface TitleLite extends ReleaseFields { id: string; name: string; seasons: number[]; kind: string; status: string }
 interface ViewLite { title_id: string; member_id: string | null; season: number; episode: number }
 interface NoteLite { id: string; body: string; from_member: string | null; to_member: string | null; pinned: boolean; colour: string; created_at: string; image_path: string | null; gif_url: string | null; doodle: unknown }
@@ -98,13 +98,15 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const events = useLive<EventLite[]>('ss-events', hid, ['events'], () =>
     supabase.from('events').select('id,title,starts_at,ends_at,all_day,repeat,member_id,location,meal_id').eq('household_id', hid!));
   const tasks = useLive<TaskLite[]>('ss-tasks', hid, ['tasks'], () =>
-    supabase.from('tasks').select('id,title,due_on,assignee_id').eq('household_id', hid!).is('completed_at', null)
+    supabase.from('tasks').select('id,title,due_on,assignee_id,reward_points,reward_text').eq('household_id', hid!).is('completed_at', null)
       .lte('due_on', weekEnd).order('due_on').limit(7));
   const titles = useLive<TitleLite[]>('ss-titles', hid, ['titles'], () =>
     supabase.from('titles').select(`id,name,seasons,kind,status,${RELEASE_COLS}`).eq('household_id', hid!).in('status', ['watching', 'want'])
       .order('updated_at', { ascending: false }).limit(8));
   const views = useLive<ViewLite[]>('ss-views', hid, ['viewings'], () =>
     supabase.from('viewings').select('title_id,member_id,season,episode').eq('household_id', hid!).is('member_id', null));
+  const likes = useLive<Array<{ note_id: string }>>('ss-likes', hid, ['note_likes'], () =>
+    supabase.from('note_likes').select('note_id').eq('household_id', hid!));
   const meter = useLive<MeterPoint[]>('ss-meter', hid, ['meter_points'], () =>
     supabase.from('meter_points').select(METER_COLS).eq('household_id', hid!).order('created_at').limit(500));
   const notes = useLive<NoteLite[]>('ss-notes', hid, ['notes'], () =>
@@ -278,6 +280,9 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
                     </button>
                     <p className={`ss-item${t.due_on && t.due_on < today ? ' ss-late' : ''}`}>
                       {t.title}{name(t.assignee_id) ? <span className="ss-who"> · {name(t.assignee_id)}</span> : null}
+                      {(t.reward_points || t.reward_text) && (
+                        <span className="ss-reward">🎁 {[t.reward_points ? `+${t.reward_points} 😇` : null, t.reward_text].filter(Boolean).join(' · ')}</span>
+                      )}
                     </p>
                   </div>
                 );
@@ -319,7 +324,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
           {slide === 'notes' && (
             <>
               <h3><MessageSquare size={24} /> Notes</h3>
-              <WallNotes notes={wallNotes} round={notesRound} name={name} />
+              <WallNotes notes={wallNotes} round={notesRound} name={name} hearts={(id) => (likes.data ?? []).filter((l) => l.note_id === id).length} />
             </>
           )}
           {slide === 'shopping' && (
@@ -401,10 +406,11 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
 /** Sticky notes, as many as fit at a readable size: if a note would be cut off, show fewer at a time
  *  (the rest take their turn the next time Notes comes round). */
 const NOTE_MIN_PX = 20;
-function WallNotes({ notes, round, name }: {
+function WallNotes({ notes, round, name, hearts }: {
   notes: NoteLite[];
   round: number;
   name: (id: string | null) => string | undefined;
+  hearts: (id: string) => number;
 }) {
   const urls = useNotePictures(notes.map((n) => n.image_path));
   const [cap, setCap] = useState(notes.length);
@@ -422,7 +428,9 @@ function WallNotes({ notes, round, name }: {
           {isRich(n)
             ? <div className="postit-face-box"><NoteFace body={n.body} picture={notePicture(n, urls)} doodle={parseDoodle(n.doodle)} /></div>
             : <FitText className="postit-body" max={max} min={NOTE_MIN_PX} onFit={onFit}>{n.body}</FitText>}
-          {name(n.from_member) && <p className="postit-from">— {name(n.from_member)}</p>}
+          {(name(n.from_member) || hearts(n.id) > 0) && (
+            <p className="postit-from">{hearts(n.id) > 0 && <span className="postit-hearts">❤️ {hearts(n.id)}</span>}{name(n.from_member) ? `— ${name(n.from_member)}` : ''}</p>
+          )}
         </div>
       ))}
     </div>

@@ -1,6 +1,6 @@
 import { POSTIT_CHOICES, postitColour, postitTilt } from '../../lib/postits';
 import { useEffect, useRef, useState } from 'react';
-import { Check, ImagePlus, Pencil, Pin, Plus, Sparkles, Trash2, Undo2, X } from 'lucide-react';
+import { Check, Heart, ImagePlus, Pencil, Pin, Plus, Sparkles, Trash2, Undo2, X } from 'lucide-react';
 import { NoteFace } from '../../components/NoteFace';
 import { DoodlePad } from './DoodlePad';
 import { GifPicker } from './GifPicker';
@@ -35,6 +35,19 @@ export interface Note {
   doodle: unknown;
 }
 type NoteColour = 'sand' | 'sage' | 'sky' | 'clay' | 'plum';
+export interface NoteLike { note_id: string; device_id: string; member_id: string | null }
+
+/** A heart at the bottom of a note: tap to say you like it (tap again to take it back). Shows who else does. */
+function LikeButton({ likes, mine, names, onToggle }: { likes: NoteLike[]; mine: boolean; names: string[]; onToggle: () => void }) {
+  const who = names.length ? `Liked by ${[...new Set(names)].join(' and ')}` : 'Like this note';
+  return (
+    <button type="button" className={`note-like${mine ? ' is-mine' : likes.length ? ' has-likes' : ''}`} aria-pressed={mine} aria-label={mine ? `Unlike. ${who}` : who} title={who} onClick={onToggle}>
+      <Heart size={22} fill={mine || likes.length ? 'currentColor' : 'none'} />
+      {likes.length > 0 && <span>{likes.length}</span>}
+    </button>
+  );
+}
+
 const COLS = 'id,body,from_member,to_member,colour,pinned,done_at,created_at,image_path,gif_url,doodle';
 
 /** Does this note have a picture, GIF or drawing (so it shows as a square face)? */
@@ -55,7 +68,7 @@ export function when(iso: string): string {
 }
 
 export function NotesScreen() {
-  const { household, members, me } = useHousehold();
+  const { household, members, me, thisDevice, devices } = useHousehold();
   const { online } = useConnection();
   const toast = useToast();
   const hid = household?.id;
@@ -63,6 +76,22 @@ export function NotesScreen() {
   const [writing, setWriting] = useState(false);
   const [editing, setEditing] = useState<Note | null>(null);
 
+  const likes = useLive<NoteLike[]>('note-likes', hid, ['note_likes'], () =>
+    supabase.from('note_likes').select('note_id,device_id,member_id').eq('household_id', hid!));
+  const likesOf = (id: string) => (likes.data ?? []).filter((l) => l.note_id === id);
+  const likerName = (l: NoteLike) => members.find((m) => m.id === l.member_id)?.display_name
+    ?? (devices.find((d) => d.id === l.device_id)?.kind === 'wall' ? 'the wall screen' : 'someone');
+  async function toggleLike(n: Note) {
+    if (!hid || !thisDevice) return;
+    const mine = likesOf(n.id).some((l) => l.device_id === thisDevice.id);
+    likes.setData((rows) => mine
+      ? rows?.filter((l) => !(l.note_id === n.id && l.device_id === thisDevice.id)) ?? rows
+      : [...(rows ?? []), { note_id: n.id, device_id: thisDevice.id, member_id: me?.id ?? null }]);
+    const { error } = mine
+      ? await supabase.from('note_likes').delete().eq('note_id', n.id).eq('device_id', thisDevice.id)
+      : await supabase.from('note_likes').insert({ note_id: n.id, device_id: thisDevice.id, household_id: hid, member_id: me?.id ?? null });
+    if (error) { toast(friendlyError(error), 'error'); void likes.reload(); }
+  }
   const live = useLive<Note[]>('notes', hid, ['notes'], () =>
     supabase.from('notes').select(COLS).eq('household_id', hid!)
       .or(`done_at.is.null,done_at.gt.${new Date(Date.now() - 30 * 86_400_000).toISOString()}`)
@@ -117,6 +146,8 @@ export function NotesScreen() {
                     : <p className="note-body">{n.body}</p>}
                   <div className="note-foot">
                     <span className="note-from">{name(n.from_member) ? `${name(n.from_member)} · ` : ''}{when(n.created_at)}</span>
+                    <LikeButton likes={likesOf(n.id)} mine={!!thisDevice && likesOf(n.id).some((l) => l.device_id === thisDevice.id)}
+                      names={likesOf(n.id).map(likerName)} onToggle={() => void toggleLike(n)} />
                     {!n.done_at ? (
                       <span className="note-actions">
                         <button type="button" className="btn btn-ghost btn-icon" aria-label="Change or draw on this note"
