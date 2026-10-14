@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Check, Film, Plus, Trash2, Tv, Undo2, Users } from 'lucide-react';
 import { Screen } from '../../components/Screen';
 import { Sheet } from '../../components/Sheet';
@@ -60,6 +61,13 @@ export function WatchScreen() {
 
   const all = titles.data ?? [];
   const shown = all.filter((t) => TAB_STATUSES[tab].includes(t.status));
+  // arriving from "What's new": open the tab the show is on
+  const highlight = (useLocation().state as { highlight?: string } | null)?.highlight;
+  useEffect(() => {
+    const t = highlight ? all.find((x) => x.id === highlight) : undefined;
+    const to = t && (Object.keys(TAB_STATUSES) as Tab[]).find((k) => TAB_STATUSES[k].includes(t.status));
+    if (to) setTab(to);
+  }, [highlight, all.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const viewsFor = (titleId: string, v: Viewer) =>
     (views.data ?? []).filter((x) => x.title_id === titleId && viewerKey(x.member_id) === v);
 
@@ -149,7 +157,7 @@ function TitleCard({ title, watched, disabled, today, onWatch, onUndo, onOpen }:
   const rel = next ? episodeRelease(title, next.season, next.episode, today) : title.kind === 'film' ? episodeRelease(title, 0, 0, today) : null;
   const notOut = rel && !rel.out ? (rel.on ? `out ${dayLabel(rel.on, today)}` : 'not out yet') : null;
   return (
-    <li className="watch-card">
+    <li className="watch-card" data-ref={title.id}>
       <button type="button" className="watch-poster" onClick={onOpen} aria-label={`Open ${title.name}`}>
         {title.kind === 'film' ? <Film size={30} /> : <Tv size={30} />}
       </button>

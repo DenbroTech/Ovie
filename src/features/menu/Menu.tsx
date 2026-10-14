@@ -69,7 +69,7 @@ export function MenuScreen() {
                     const p = byDay[day];
                     const meal = p ? mealById(p.meal_id) : undefined;
                     return (
-                      <li key={day}>
+                      <li key={day} data-ref={p?.id}>
                         <button type="button" className={`menu-day${p ? ' has-meal' : ''}`} disabled={!online} onClick={() => setOpenDay(day)}>
                           <span className="menu-day-name">{dayLabel(day, today)}</span>
                           <span className="menu-day-meal">{p ? (meal ? mealTitle(meal) : p.title) : <span className="muted">Nothing planned</span>}</span>

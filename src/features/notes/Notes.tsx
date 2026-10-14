@@ -107,7 +107,7 @@ export function NotesScreen() {
           ) : (
             <ul className="note-board">
               {list.map((n) => (
-                <li key={n.id} className={`note postit-${postitColour(n.colour)}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
+                <li key={n.id} data-ref={n.id} className={`note postit-${postitColour(n.colour)}`} style={{ '--tilt': `${postitTilt(n.id)}deg` } as React.CSSProperties}>
                   <div className="note-head">
                     <span className="note-to">{n.to_member ? `For ${n.to_member === me?.id ? 'you' : name(n.to_member) ?? 'someone'}` : 'For everyone'}</span>
                     {n.pinned && <Pin size={16} aria-label="Pinned" />}

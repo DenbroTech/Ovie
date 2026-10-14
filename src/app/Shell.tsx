@@ -11,6 +11,7 @@ import { Screensaver, screensaverMinutes, useIdle } from '../features/screensave
 import { fitWall } from '../lib/wallFit';
 import { applyFrame } from '../lib/frame';
 import { enableDragScroll } from '../lib/dragScroll';
+import { ActivityProvider, useHighlightOnArrival } from '../features/activity/Activity';
 
 /** Direction of the slide: into an app = from the right, back home = from the left. */
 export function slideDirection(pathname: string, state: unknown): 'forward' | 'back' | 'none' {
@@ -57,8 +58,10 @@ export function Shell() {
   const [idle, wake] = useIdle(minutes);
 
   const dir = slideDirection(location.pathname, location.state);
+  useHighlightOnArrival();
 
   return (
+    <ActivityProvider>
     <div className="shell">
       <AlarmRinger />
       {idle && <Screensaver onWake={wake} />}
@@ -72,5 +75,6 @@ export function Shell() {
         </Routes>
       </div>
     </div>
+    </ActivityProvider>
   );
 }

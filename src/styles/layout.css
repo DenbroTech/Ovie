@@ -628,3 +628,28 @@ section + section > .group-label { margin-top: var(--s-5); }
 .postit-rich { padding: 8px; }
 .postit-face-box { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; container-type: size; }
 .postit-face-box .note-face { width: min(100cqw, 100cqh); }
+
+/* ---------- What's new ---------- */
+.activity-bell { position: relative; flex: none; }
+.activity-badge { position: absolute; top: 2px; right: 0; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px;
+  background: #e53935; color: #fff; font-size: 13px; font-weight: 800; line-height: 22px; text-align: center;
+  box-shadow: 0 0 0 2px var(--bg); pointer-events: none; }
+.home-bell { margin-left: auto; }
+.screen-actions { display: flex; align-items: center; gap: var(--s-2); }
+.activity-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.activity-item { width: 100%; display: flex; align-items: center; gap: var(--s-3); padding: var(--s-2) var(--s-2); border: 0; border-radius: 12px;
+  background: none; color: inherit; text-align: left; font: inherit; cursor: pointer; }
+.activity-item:hover { background: var(--surface-2); }
+.activity-item.is-unread { background: color-mix(in srgb, #e53935 8%, transparent); }
+.activity-text { flex: 1; min-width: 0; display: grid; gap: 2px; overflow-wrap: anywhere; }
+.activity-new { flex: none; width: 10px; height: 10px; border-radius: 50%; background: #e53935; }
+.activity-dot-you { flex: none; width: 36px; height: 36px; border-radius: 50%; background: var(--surface-2); display: grid; place-items: center; font-size: 18px; }
+
+/* the thing you came to see glows for a moment */
+.flash-found { animation: flash-found 2.4s ease-out; }
+@keyframes flash-found {
+  0%, 30% { box-shadow: 0 0 0 4px #e53935, 0 0 24px 4px rgb(229 57 53 / 0.45); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+:root[data-device='wall'] .home-bell svg { width: 34px; height: 34px; }
+:root[data-device='wall'] .activity-badge { min-width: 26px; height: 26px; line-height: 26px; font-size: 15px; }

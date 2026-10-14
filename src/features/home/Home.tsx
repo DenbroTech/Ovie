@@ -7,6 +7,7 @@ import { useHousehold } from '../../app/HouseholdProvider';
 import { APPS } from '../../app/apps';
 import { formatClock, formatLongDate, greetingFor } from '../../lib/time';
 import { useBadges, type TodayEvent } from './useBadges';
+import { ActivityBell } from '../activity/Activity';
 
 function useNow(intervalMs = 15_000) {
   const [now, setNow] = useState(() => new Date());
@@ -40,6 +41,7 @@ export function Home() {
             <p className="hello-line">{greetingFor(now, tz)}{name}!</p>
             <p className="muted small">{household?.name}</p>
           </div>
+          <ActivityBell className="home-bell" />
         </div>
       </header>
 
