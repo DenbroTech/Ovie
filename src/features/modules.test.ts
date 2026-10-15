@@ -106,3 +106,19 @@ describe('job rewards', () => {
     expect(rewardWords({ reward_points: null, reward_text: null }, 'you')).toBe('');
   });
 });
+
+import { notePages } from './screensaver/Screensaver';
+describe('wall note turns', () => {
+  const rich = (n: string) => n.startsWith('pic');
+  it('the newest note is always in the first turn', () => {
+    expect(notePages(['text', 'pic1'], 4, rich)).toEqual([['text', 'pic1']]);
+    expect(notePages(['a', 'b', 'c', 'd'], 4, rich)).toEqual([['a', 'b', 'c', 'd']]);
+  });
+  it('a turn with a picture holds two', () => {
+    expect(notePages(['a', 'pic1', 'b', 'c'], 4, rich)).toEqual([['a', 'pic1'], ['b', 'c']]);
+    expect(notePages(['pic1', 'pic2', 'pic3'], 4, rich)).toEqual([['pic1', 'pic2'], ['pic3']]);
+  });
+  it('fewer at a time when the words would be too small', () => {
+    expect(notePages(['a', 'b', 'c'], 2, rich)).toEqual([['a', 'b'], ['c']]);
+  });
+});
