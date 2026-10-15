@@ -4,13 +4,18 @@ const n = (id: string, daysAgo: number, pinned = false) => ({ id, pinned, create
 const now = new Date(Date.UTC(2026, 9, 11));
 
 describe('post-it notes', () => {
-  it('shows up to 4 notes from the last week', () => {
-    expect(notesForWall([n('a', 0), n('b', 1), n('c', 2), n('d', 3), n('e', 4)], now).map((x) => x.id)).toEqual(['a', 'b', 'c', 'd']);
-    expect(notesForWall([n('a', 1), n('old', 20)], now).map((x) => x.id)).toEqual(['a']);
+  it('shows up to 4 notes from the last 2 days', () => {
+    const h = 1 / 24;
+    expect(notesForWall([n('a', 0), n('b', 6 * h), n('c', 1), n('d', 1.5), n('e', 1.9)], now).map((x) => x.id)).toEqual(['a', 'b', 'c', 'd']);
   });
-  it('just the newest one when everything is over a week old', () => {
-    expect(notesForWall([n('x', 10), n('y', 30)], now).map((x) => x.id)).toEqual(['x']);
+  it('always the 2 newest, however old', () => {
+    expect(notesForWall([n('x', 10), n('y', 30), n('z', 40)], now).map((x) => x.id)).toEqual(['x', 'y']);
+    expect(notesForWall([n('a', 1), n('old', 5), n('older', 9)], now).map((x) => x.id)).toEqual(['a', 'old']);
+    expect(notesForWall([n('only', 20)], now).map((x) => x.id)).toEqual(['only']);
     expect(notesForWall([], now)).toEqual([]);
+  });
+  it('3 new ones: all 3, nothing older', () => {
+    expect(notesForWall([n('a', 0), n('b', 1), n('c', 1.5), n('old', 3)], now).map((x) => x.id)).toEqual(['a', 'b', 'c']);
   });
   it('keeps pinned notes up even when old', () => {
     expect(notesForWall([n('p', 40, true), n('a', 1)], now).map((x) => x.id)).toEqual(['p', 'a']);

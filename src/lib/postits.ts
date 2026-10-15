@@ -24,10 +24,19 @@ export function postitTilt(id: string): number {
   return deg === 0 ? 1.5 : deg;
 }
 
-/** The screensaver shows the last 4 notes from the past week (pinned ones always count);
- *  if everything is older than that, just the newest one. `notes` come newest/pinned first. */
-export function notesForWall<N extends { created_at: string; pinned: boolean }>(notes: N[], now = new Date(), days = 7, max = 4): N[] {
+/** Which notes the screensaver shows: up to 4 from the last 2 days (pinned ones always count as new), and never
+ *  fewer than the 2 newest, however old. `notes` come pinned first, then newest. */
+export function notesForWall<N extends { created_at: string; pinned: boolean }>(
+  notes: N[], now = new Date(), days = 2, min = 2, max = 4,
+): N[] {
   const cutoff = now.getTime() - days * 86_400_000;
-  const recent = notes.filter((n) => n.pinned || new Date(n.created_at).getTime() >= cutoff);
-  return recent.length ? recent.slice(0, max) : notes.slice(0, 1);
+  const shown = notes.filter((n) => n.pinned || new Date(n.created_at).getTime() >= cutoff).slice(0, max);
+  if (shown.length >= min) return shown;
+  // top up with the newest notes, by when they were written
+  const newest = [...notes].sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+  for (const n of newest) {
+    if (shown.length >= min) break;
+    if (!shown.includes(n)) shown.push(n);
+  }
+  return shown;
 }
