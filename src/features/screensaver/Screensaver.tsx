@@ -403,6 +403,20 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   );
 }
 
+/** Split the wall's notes into turns, keeping their order (newest first) so the newest is always in the first turn:
+ *  up to `cap` written notes share a turn, but a turn with a picture or drawing holds 2, so they stay big. */
+export function notePages<N>(notes: N[], cap: number, rich: (n: N) => boolean): N[][] {
+  const pages: N[][] = [];
+  let page: N[] = [];
+  for (const n of notes) {
+    const next = [...page, n];
+    const limit = next.some(rich) ? 2 : Math.max(1, cap);
+    if (page.length && next.length > limit) { pages.push(page); page = [n]; } else page = next;
+  }
+  if (page.length) pages.push(page);
+  return pages;
+}
+
 /** Sticky notes, as many as fit at a readable size: if a note would be cut off, show fewer at a time
  *  (the rest take their turn the next time Notes comes round). */
 const NOTE_MIN_PX = 20;
@@ -414,10 +428,7 @@ function WallNotes({ notes, round, name, hearts }: {
 }) {
   const urls = useNotePictures(notes.map((n) => n.image_path));
   const [cap, setCap] = useState(notes.length);
-  // a note with a picture or drawing gets the slide to itself; written notes share it, as many as fit
-  const plain = notes.filter((n) => !isRich(n));
-  const pages: NoteLite[][] = [...notes.filter(isRich).map((n) => [n])];
-  for (let i = 0; i < plain.length; i += Math.max(1, cap)) pages.push(plain.slice(i, i + Math.max(1, cap)));
+  const pages = notePages(notes, cap, isRich);
   const shown = pages.length ? pages[round % pages.length] : [];
   const onFit = useCallback((fits: boolean) => { if (!fits) setCap((c) => Math.max(1, c - 1)); }, []);
   const max = shown.length === 1 ? 56 : shown.length === 2 ? 42 : 32;
