@@ -47,7 +47,6 @@ export function deadlineEvent(t: DeadlineTask): CalEvent {
 }
 
 const COLS = 'id,title,notes,location,starts_at,ends_at,all_day,member_id,repeat,repeat_every,meal_id';
-const REPEAT_LABEL: Record<EventRepeat, string> = { none: 'Does not repeat', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' };
 
 type View = 'agenda' | 'month';
 
@@ -277,34 +276,33 @@ function EventSheet({ event, newOn, householdId, myId, members, favourites, onCl
           <label htmlFor="e-title">What</label>
           <input id="e-title" required maxLength={120} autoFocus={!event} placeholder="e.g. Dentist, Mum's birthday" value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
-        <div className="field-row">
-          <div className="field">
-            <label htmlFor="e-date">Date</label>
-            <input id="e-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-          <div className="field">
-            <label htmlFor="e-repeat">Repeat</label>
-            <select id="e-repeat" value={repeat} onChange={(e) => setRepeat(e.target.value as EventRepeat)}>
-              {(Object.keys(REPEAT_LABEL) as EventRepeat[]).map((r) => <option key={r} value={r}>{REPEAT_LABEL[r]}</option>)}
-            </select>
-          </div>
+        <div className="field">
+          <label htmlFor="e-date">Date</label>
+          <input id="e-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
-        {repeat !== 'none' && (
-          <div className="field">
-            <label htmlFor="e-every">How often</label>
-            <div className="repeat-every">
-              <span>Every</span>
-              <input id="e-every" type="number" inputMode="numeric" min={1} max={52} value={every}
-                onChange={(e) => setEvery(Math.max(1, Math.min(52, Math.round(Number(e.target.value) || 1))))} />
-              <span>{repeat === 'weekly' ? (every === 1 ? 'week' : 'weeks') : repeat === 'monthly' ? (every === 1 ? 'month' : 'months') : (every === 1 ? 'year' : 'years')}</span>
-            </div>
-            <div className="chips">
-              {[1, 2, 3, 4, 6].map((n) => (
-                <button key={n} type="button" className="chip-btn plain" aria-pressed={every === n} onClick={() => setEvery(n)}>{repeatText(repeat, n)}</button>
-              ))}
-            </div>
+        <div className="field">
+          <span className="field-label"><Repeat size={16} /> Repeat</span>
+          <div className="segmented repeat-pick" role="radiogroup" aria-label="Repeat">
+            {(['none', 'weekly', 'monthly', 'yearly'] as EventRepeat[]).map((r) => (
+              <button key={r} type="button" role="radio" aria-checked={repeat === r} aria-pressed={repeat === r} onClick={() => setRepeat(r)}>
+                {r === 'none' ? 'Never' : r === 'weekly' ? 'Weeks' : r === 'monthly' ? 'Months' : 'Years'}
+              </button>
+            ))}
           </div>
-        )}
+          {repeat !== 'none' && (
+            <>
+              <div className="repeat-every">
+                <label htmlFor="e-every">Every</label>
+                <button type="button" className="btn btn-secondary btn-icon" aria-label="Fewer" disabled={every <= 1} onClick={() => setEvery((n) => Math.max(1, n - 1))}>−</button>
+                <input id="e-every" type="number" inputMode="numeric" min={1} max={52} value={every}
+                  onChange={(e) => setEvery(Math.max(1, Math.min(52, Math.round(Number(e.target.value) || 1))))} />
+                <button type="button" className="btn btn-secondary btn-icon" aria-label="More" disabled={every >= 52} onClick={() => setEvery((n) => Math.min(52, n + 1))}>+</button>
+                <span>{repeat === 'weekly' ? (every === 1 ? 'week' : 'weeks') : repeat === 'monthly' ? (every === 1 ? 'month' : 'months') : (every === 1 ? 'year' : 'years')}</span>
+              </div>
+              <p className="muted small">{repeatText(repeat, every)}, from {date ? parseIso(date).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) : 'the date above'}.</p>
+            </>
+          )}
+        </div>
         <label className="check">
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
           <span>All day (birthdays, holidays)</span>
