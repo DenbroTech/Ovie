@@ -16,7 +16,7 @@ import { useConnection } from '../../app/ConnectionProvider';
 import { supabase } from '../../lib/supabase';
 import { friendlyError } from '../../lib/errors';
 import { useLive } from '../../lib/live';
-import { addDays, dayLabel, expandEvents, parseIso, repeatText, timeLabel, toIso, todayIso, type EventRepeat, type Occurrence } from '../../lib/dates';
+import { addDays, dayLabel, expandEvents, occurrenceWhen, parseIso, repeatText, timeLabel, toIso, todayIso, type EventRepeat, type Occurrence } from '../../lib/dates';
 import type { Member } from '../../lib/types';
 
 export interface CalEvent {
@@ -195,12 +195,13 @@ function EventRow({ occ, who, onOpen }: { occ: Occurrence<CalEvent>; who: Member
   const e = occ.event;
   return (
     <li className={`row-item${e.task ? ' is-deadline' : ''}`} data-ref={e.id}>
-      <span className="event-time">{e.task ? (e.all_day ? 'Due' : `Due ${timeLabel(occ.start)}`) : eventWhenLabel(e, () => timeLabel(occ.start))}</span>
+      <span className="event-time">{e.task ? (e.all_day ? 'Due' : `Due ${timeLabel(occ.start)}`) : (occ.days ?? 1) > 1 ? occurrenceWhen(occ, timeLabel) : eventWhenLabel(e, () => timeLabel(occ.start))}</span>
       <button type="button" className="row-main" onClick={onOpen}>
         <span className="row-title">{e.title}</span>
-        {(e.location || e.repeat !== 'none' || (!e.all_day && occ.end)) && (
+        {(e.location || e.repeat !== 'none' || (!e.all_day && occ.end) || (occ.days ?? 1) > 1) && (
           <span className="row-meta">
-            {!e.all_day && occ.end && <span>until {timeLabel(occ.end)}</span>}
+            {(occ.days ?? 1) > 1 ? <span>{spanText(occ.start, occ.end, e.all_day)}</span>
+              : !e.all_day && occ.end && <span>until {timeLabel(occ.end)}</span>}
             {e.location && <span><MapPin size={14} /> {e.location}</span>}
             {e.repeat !== 'none' && <span><Repeat size={14} /> {repeatText(e.repeat, e.repeat_every)}</span>}
           </span>
@@ -209,6 +210,17 @@ function EventRow({ occ, who, onOpen }: { occ: Occurrence<CalEvent>; who: Member
       <WhoBadge member={who} />
     </li>
   );
+}
+
+const shortDate = (iso: string) => (iso ? parseIso(iso).toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' }) : '');
+
+/** "Fri 17 Oct, 6:00 PM – Sun 19 Oct, 2:00 PM" or "Mon 20 Oct – Fri 24 Oct" */
+export function spanText(start: Date, end: Date | null, allDay: boolean): string {
+  if (!end) return '';
+  const day = (d: Date) => d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+  const t = (d: Date) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+  if (allDay) return `${day(start)} – ${day(new Date(end.getTime() - 1))}`;
+  return `${day(start)}, ${t(start)} – ${day(end)}, ${t(end)}`;
 }
 
 function localParts(iso: string): { date: string; time: string } {
@@ -229,6 +241,10 @@ function EventSheet({ event, newOn, householdId, myId, members, favourites, onCl
   const [allDay, setAllDay] = useState(event?.all_day ?? false);
   const [from, setFrom] = useState(start.time);
   const [to, setTo] = useState(end?.time ?? '');
+  // over several days: the last day (an all-day event's end is stored as the start of the day after)
+  const savedLast = !event?.ends_at ? start.date : event.all_day ? addDays(localParts(event.ends_at).date, -1) : end!.date;
+  const [multi, setMulti] = useState(savedLast > start.date);
+  const [endDate, setEndDate] = useState(savedLast > start.date ? savedLast : addDays(start.date, 1));
   const [who, setWho] = useState<string | null>(event ? event.member_id : null);
   const [repeat, setRepeat] = useState<EventRepeat>(event?.repeat ?? 'none');
   const [every, setEvery] = useState(event?.repeat_every ?? 1);
@@ -239,9 +255,12 @@ function EventSheet({ event, newOn, householdId, myId, members, favourites, onCl
   const [star, setStar] = useState(false);
   const alreadyFav = findFavourite(favourites, title);
 
+  const lastDay = multi && endDate > date ? endDate : date;
   const startsAt = allDay ? new Date(`${date}T00:00`) : new Date(`${date}T${from || '00:00'}`);
-  const endsAt = !allDay && to ? new Date(`${date}T${to}`) : null;
-  const badEnd = endsAt !== null && endsAt < startsAt;
+  const endsAt = allDay
+    ? (lastDay > date ? new Date(`${addDays(lastDay, 1)}T00:00`) : null)
+    : lastDay > date ? new Date(`${lastDay}T${to || '23:59'}`) : to ? new Date(`${date}T${to}`) : null;
+  const badEnd = (endsAt !== null && endsAt < startsAt) || (multi && !!endDate && endDate <= date);
 
   async function save() {
     setBusy(true);
@@ -277,8 +296,8 @@ function EventSheet({ event, newOn, householdId, myId, members, favourites, onCl
           <input id="e-title" required maxLength={120} autoFocus={!event} placeholder="e.g. Dentist, Mum's birthday" value={title} onChange={(e) => setTitle(e.target.value)} />
         </div>
         <div className="field">
-          <label htmlFor="e-date">Date</label>
-          <input id="e-date" type="date" required value={date} onChange={(e) => setDate(e.target.value)} />
+          <label htmlFor="e-date">{multi ? 'From' : 'Date'}</label>
+          <input id="e-date" type="date" required value={date} onChange={(e) => { setDate(e.target.value); if (multi && endDate <= e.target.value) setEndDate(addDays(e.target.value, 1)); }} />
         </div>
         <div className="field">
           <span className="field-label"><Repeat size={16} /> Repeat</span>
@@ -307,19 +326,30 @@ function EventSheet({ event, newOn, householdId, myId, members, favourites, onCl
           <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} />
           <span>All day (birthdays, holidays)</span>
         </label>
+        <label className="check">
+          <input type="checkbox" checked={multi} onChange={(e) => { setMulti(e.target.checked); if (e.target.checked && endDate <= date) setEndDate(addDays(date, 1)); }} />
+          <span>Over several days (a weekend away, a holiday)</span>
+        </label>
+        {multi && (
+          <div className="field">
+            <label htmlFor="e-until">Until</label>
+            <input id="e-until" type="date" min={addDays(date, 1)} value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </div>
+        )}
         {!allDay && (
           <div className="field-row">
             <div className="field">
-              <label htmlFor="e-from">Starts</label>
+              <label htmlFor="e-from">Starts{multi ? ` (${shortDate(date)})` : ''}</label>
               <input id="e-from" type="time" required value={from} onChange={(e) => setFrom(e.target.value)} />
             </div>
             <div className="field">
-              <label htmlFor="e-to">Ends (optional)</label>
+              <label htmlFor="e-to">{multi ? `Ends (${shortDate(endDate)})` : 'Ends (optional)'}</label>
               <input id="e-to" type="time" value={to} onChange={(e) => setTo(e.target.value)} />
             </div>
           </div>
         )}
-        {badEnd && <div className="notice notice-warn">The end time is before the start.</div>}
+        {multi && !badEnd && <p className="muted small">{spanText(startsAt, endsAt, allDay)}</p>}
+        {badEnd && <div className="notice notice-warn">{multi && endDate <= date ? 'Pick a last day after the first day.' : 'The end time is before the start.'}</div>}
         <div className="field">
           <span className="field-label">Who</span>
           <PersonPicker members={members} value={who} onChange={setWho} label="Who" />

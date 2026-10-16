@@ -71,6 +71,9 @@ export interface Occurrence<E extends EventLike> {
   start: Date;
   end: Date | null;
   day: string; // ISO date of the occurrence (device local)
+  /** for an event over several days: which day this is (0 = the first) and how many days it covers */
+  dayIndex?: number;
+  days?: number;
 }
 
 const everyOf = (ev: { repeat_every?: number | null }) => Math.max(1, Math.min(52, ev.repeat_every ?? 1));
@@ -103,35 +106,55 @@ function step(d: Date, repeat: EventRepeat, n: number): Date {
   return x;
 }
 
-/** All occurrences that start on a day between fromIso and toIso (inclusive), sorted by start. */
+/** All occurrences on days between fromIso and toIso (inclusive), sorted by start. An event that runs over several
+ *  days (a weekend away, a holiday) gives one occurrence per day it covers, numbered with dayIndex / days. */
 export function expandEvents<E extends EventLike>(events: E[], fromIso: string, toIsoStr: string): Occurrence<E>[] {
   const from = parseIso(fromIso).getTime();
   const to = parseIso(addDays(toIsoStr, 1)).getTime();
   const out: Occurrence<E>[] = [];
+  const add = (ev: E, s: Date, dur: number | null) => {
+    const end = dur === null ? null : new Date(s.getTime() + dur);
+    const first = toIso(s);
+    const last = end && end.getTime() > s.getTime() ? toIso(new Date(end.getTime() - 1)) : first;
+    const days = Math.min(daysBetween(first, last) + 1, 366);
+    for (let i = 0; i < days; i++) {
+      const day = addDays(first, i);
+      if (day < fromIso || day > toIsoStr) continue;
+      out.push(days > 1 ? { event: ev, start: s, end, day, dayIndex: i, days } : { event: ev, start: s, end, day });
+    }
+  };
   for (const ev of events) {
     const start = new Date(ev.starts_at);
     const dur = ev.ends_at ? new Date(ev.ends_at).getTime() - start.getTime() : null;
     if (ev.repeat === 'none') {
-      if (start.getTime() < to && (start.getTime() >= from || (dur !== null && start.getTime() + dur > from))) {
-        out.push({ event: ev, start, end: dur === null ? null : new Date(start.getTime() + dur), day: toIso(start) });
-      }
+      if (start.getTime() < to && (start.getTime() >= from || (dur !== null && start.getTime() + dur > from))) add(ev, start, dur);
       continue;
     }
-    // jump close to the window, then walk forward
+    // jump close to the window (a little before, for events that run over several days), then walk forward
     let n = 0;
-    if (start.getTime() < from) {
+    const lead = Math.max(0, dur ?? 0);
+    if (start.getTime() < from - lead) {
       const approx = (ev.repeat === 'weekly' ? 7 : ev.repeat === 'monthly' ? 28 : 365) * everyOf(ev);
-      n = Math.max(0, Math.floor((from - start.getTime()) / (approx * 86_400_000)) - 1);
+      n = Math.max(0, Math.floor((from - lead - start.getTime()) / (approx * 86_400_000)) - 1);
     }
     for (let guard = 0; guard < 600; guard++, n++) {
       const s = step(start, ev.repeat, n * everyOf(ev));
       if (s.getTime() >= to) break;
-      if (s.getTime() >= from) {
-        out.push({ event: ev, start: s, end: dur === null ? null : new Date(s.getTime() + dur), day: toIso(s) });
-      }
+      if (s.getTime() >= from || (dur !== null && s.getTime() + dur > from)) add(ev, s, dur);
     }
   }
-  return out.sort((a, b) => a.start.getTime() - b.start.getTime());
+  return out.sort((a, b) => (a.day < b.day ? -1 : a.day > b.day ? 1 : a.start.getTime() - b.start.getTime()));
+}
+
+/** How a day of an event reads in a list: a time, "All day", or for one running over several days
+ *  "6:00 PM →" on its first day, "All day" in between and "until 2:00 PM" on its last. */
+export function occurrenceWhen(o: { event: { all_day: boolean }; start: Date; end: Date | null; dayIndex?: number; days?: number },
+  time: (d: Date) => string): string {
+  if (!o.days || o.days < 2) return o.event.all_day ? 'All day' : time(o.start);
+  if (o.event.all_day) return `Day ${(o.dayIndex ?? 0) + 1} of ${o.days}`;
+  if (o.dayIndex === 0) return `${time(o.start)} →`;
+  if (o.dayIndex === o.days - 1 && o.end) return `until ${time(o.end)}`;
+  return 'All day';
 }
 
 /** Countdowns for the wall: the next few one-off, monthly or yearly events (weekly ones aren't worth counting down to). */
@@ -139,7 +162,7 @@ export function countdowns<E extends EventLike>(events: E[], today: string, hori
   const seen = new Set<string>();
   const out: Array<{ event: E; day: string; days: number }> = [];
   for (const o of expandEvents(events.filter((e) => e.repeat !== 'weekly'), addDays(today, 1), addDays(today, horizonDays))) {
-    if (seen.has(o.event.id)) continue;
+    if (seen.has(o.event.id) || (o.dayIndex ?? 0) > 0) continue; // already under way: nothing to count down to
     seen.add(o.event.id);
     out.push({ event: o.event, day: o.day, days: daysBetween(today, o.day) });
     if (out.length === max) break;
