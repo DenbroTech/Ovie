@@ -12,6 +12,7 @@ const SHELL = 'ovie-shell-v1';
 const ASSETS = 'ovie-assets-v1';
 const PICS = 'ovie-pics-v1';
 const PHOTOS = 'ovie-photos-v1';
+const FONTS = 'ovie-fonts-v1';
 const SHEEP = ['happy', 'sad', 'angry', 'excited', 'worried', 'sleepy', 'surprised', 'in-love', 'cool', 'silly',
   'shocked', 'tired', 'thinking', 'celebrating', 'hungry', 'working', 'shopping', 'calendar', 'watch', 'photos',
   'alarms', 'finances', 'settings'];
@@ -29,7 +30,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     (async () => {
-      const keep = new Set([SHELL, ASSETS, PICS, PHOTOS]);
+      const keep = new Set([SHELL, ASSETS, PICS, PHOTOS, FONTS]);
       for (const key of await caches.keys()) {
         if (!keep.has(key)) await caches.delete(key);
       }
@@ -56,6 +57,21 @@ self.addEventListener('fetch', (event) => {
         } catch {
           return (await cache.match(key)) ?? Response.error();
         }
+      })(),
+    );
+    return;
+  }
+
+  // Web fonts (Nunito, and the wall's colour emoji): keep them so text and emoji still look right offline.
+  if (url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com') {
+    event.respondWith(
+      (async () => {
+        const cache = await caches.open(FONTS);
+        const hit = await cache.match(req.url);
+        if (hit) return hit;
+        const res = await fetch(req);
+        if (res.ok || res.type === 'opaque') cache.put(req.url, res.clone());
+        return res;
       })(),
     );
     return;

@@ -723,3 +723,6 @@ section + section > .group-label { margin-top: var(--s-5); }
 .repeat-pick button { flex: 1; }
 .repeat-every { margin-top: var(--s-2); flex-wrap: wrap; }
 .repeat-every input { width: 72px; }
+
+/* wall screen: colour emoji from the web font (the Pi shows empty squares without it) */
+:root[data-device='wall'] { --font: 'Nunito', ui-rounded, system-ui, 'Noto Color Emoji', sans-serif; }
