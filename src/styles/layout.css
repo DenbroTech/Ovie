@@ -720,3 +720,6 @@ section + section > .group-label { margin-top: var(--s-5); }
 .deadline-box .check svg { vertical-align: -3px; margin-right: 4px; }
 .repeat-every { display: flex; align-items: center; gap: var(--s-2); font-weight: 700; }
 .repeat-every input { width: 80px; text-align: center; }
+.repeat-pick button { flex: 1; }
+.repeat-every { margin-top: var(--s-2); flex-wrap: wrap; }
+.repeat-every input { width: 72px; }
