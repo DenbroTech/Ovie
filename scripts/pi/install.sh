@@ -29,6 +29,8 @@ if [ "${VER:-0}" -lt 111 ]; then
   exit 1
 fi
 command -v python3 >/dev/null || { warn "python3 is missing: sudo apt install -y python3"; exit 1; }
+# Colour emoji (otherwise they show as empty squares); the launcher also fetches it if this fails.
+fc-list 2>/dev/null | grep -qi "color emoji" || sudo apt-get install -y fonts-noto-color-emoji || true
 
 say "Installing Ovie kiosk files into $DIR"
 mkdir -p "$DIR"

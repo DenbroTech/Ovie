@@ -32,6 +32,17 @@ export function OfflineBanner() {
   );
 }
 
+/** The Pi has no colour emoji font, so emoji show as empty squares. Load Google's Noto Color Emoji on the wall
+ *  (only the bits of it that are used are downloaded; the service worker keeps them for offline). */
+const EMOJI_CSS = 'https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap';
+function loadEmojiFont() {
+  if (document.querySelector(`link[href="${EMOJI_CSS}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = EMOJI_CSS;
+  document.head.appendChild(link);
+}
+
 export function Shell() {
   const location = useLocation();
   const { thisDevice } = useHousehold();
@@ -44,6 +55,7 @@ export function Shell() {
     const unfit = fitWall(root);
     const unframe = applyFrame(root);
     const undrag = enableDragScroll();
+    loadEmojiFont();
     return () => { unfit(); unframe(); undrag(); delete root.dataset.device; };
   }, [thisDevice?.kind]);
 
