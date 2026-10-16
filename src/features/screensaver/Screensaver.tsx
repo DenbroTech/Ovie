@@ -12,7 +12,7 @@ import { supabase } from '../../lib/supabase';
 import { useLive } from '../../lib/live';
 import { usePhotos } from '../../lib/photos';
 import { formatClock, formatLongDate } from '../../lib/time';
-import { addDays, countdowns, daysBetween, expandEvents, money, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
+import { addDays, countdowns, daysBetween, expandEvents, money, occurrenceWhen, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
 import { RELEASE_COLS, episodeRelease, nextOutEpisode, upcomingReleases, type ReleaseFields } from '../../lib/releases';
 import { notesForWall, postitColour, postitTilt } from '../../lib/postits';
 import { NoteFace } from '../../components/NoteFace';
@@ -155,7 +155,9 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const pick = pickTitle && pickNext ? { title: pickTitle, next: pickNext, label: pickTitle.kind === 'film' ? 'Film' : `S${pickNext.season} E${pickNext.episode}` } : null;
 
   const todayOcc = week.filter((o) => o.day === today);
-  const laterOcc = week.filter((o) => o.day !== today);
+  // coming up: each event once, on its first day this week (not ones already on today)
+  const laterOcc = week.filter((o, i) => o.day !== today && !todayOcc.some((t) => t.event.id === o.event.id)
+    && week.findIndex((w) => w.event.id === o.event.id && w.day !== today) === i);
   const jobsNow = (tasks.data ?? []).filter((t) => !t.due_on || t.due_on <= today);
 
   const wallNotes = notesForWall(notes.data ?? [], now);
@@ -222,6 +224,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     notes: notesMood(notes.data ?? [], null, now), shopping: shoppingMood((items.data ?? []).length),
     money: 'finances', watch: 'watch', meter: 'happy',
   } as Record<SlideId, SheepMood>)[slide];
+  const lastDayOf = (o: { day: string; dayIndex?: number; days?: number }) => addDays(o.day, (o.days ?? 1) - 1 - (o.dayIndex ?? 0));
   const shortDay = (day: string) => daysBetween(today, day) === 1 ? 'Tomorrow' : parseIso(day).toLocaleDateString(undefined, { weekday: 'short' });
   const fmtTime = (d: Date) => new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit', timeZone: tz }).format(d);
 
@@ -260,8 +263,10 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               <FitText className="ss-fit" max={48} min={22}>
               {todayOcc.length === 0 ? <p className="ss-big-quiet">Nothing on today</p> : todayOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id} className="ss-item">
-                  <span className="ss-when">{eventWhenLabel(o.event, () => fmtTime(o.start))}</span>{o.event.title}
-                  {!o.event.all_day && o.end && <span className="ss-until">until {fmtTime(o.end)}</span>}
+                  <span className="ss-when">{(o.days ?? 1) > 1 ? occurrenceWhen(o, fmtTime) : eventWhenLabel(o.event, () => fmtTime(o.start))}</span>{o.event.title}
+                  {(o.days ?? 1) > 1 && o.end
+                    ? (o.dayIndex ?? 0) < (o.days ?? 1) - 1 && <span className="ss-until">until {shortDay(lastDayOf(o))}{o.event.all_day ? '' : ` ${fmtTime(o.end)}`}</span>
+                    : !o.event.all_day && o.end && <span className="ss-until">until {fmtTime(o.end)}</span>}
                 </p>
               ))}
               </FitText>
@@ -313,7 +318,9 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               {laterOcc.slice(0, 3).map((o) => (
                 <p key={o.event.id + o.day} className="ss-item">
                   <span className="ss-when">{shortDay(o.day)}</span>{o.event.title}
-                  {!o.event.all_day && !o.event.meal_id && (
+                  {(o.days ?? 1) > 1 ? (
+                    <span className="ss-until">{o.event.all_day ? '' : `${fmtTime(o.start)} `}until {shortDay(lastDayOf(o))}</span>
+                  ) : !o.event.all_day && !o.event.meal_id && (
                     <span className="ss-until">{fmtTime(o.start)}{o.end ? ` – ${fmtTime(o.end)}` : ''}</span>
                   )}
                 </p>

@@ -78,3 +78,33 @@ describe('repeat every N', () => {
     expect(repeatText('none', 5)).toBe('Does not repeat');
   });
 });
+
+import { countdowns, occurrenceWhen } from './dates';
+describe('events over several days', () => {
+  const t = (d: Date) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  it('a weekend away shows on each of its days', () => {
+    const ev = { id: 'w', starts_at: new Date(2026, 9, 16, 18).toISOString(), ends_at: new Date(2026, 9, 18, 14).toISOString(), all_day: false, repeat: 'none' as const };
+    const occ = expandEvents([ev], '2026-10-15', '2026-10-20');
+    expect(occ.map((o) => [o.day, o.dayIndex, o.days])).toEqual([['2026-10-16', 0, 3], ['2026-10-17', 1, 3], ['2026-10-18', 2, 3]]);
+    expect(occ.map((o) => occurrenceWhen(o, t))).toEqual(['18:00 →', 'All day', 'until 14:00']);
+  });
+  it('an all-day holiday Mon-Fri (stored as ending at the start of Saturday)', () => {
+    const ev = { id: 'h', starts_at: new Date(2026, 9, 19).toISOString(), ends_at: new Date(2026, 9, 24).toISOString(), all_day: true, repeat: 'none' as const };
+    const occ = expandEvents([ev], '2026-10-19', '2026-10-31');
+    expect(occ.map((o) => o.day)).toEqual(['2026-10-19', '2026-10-20', '2026-10-21', '2026-10-22', '2026-10-23']);
+    expect(occurrenceWhen(occ[2], t)).toBe('Day 3 of 5');
+  });
+  it('shows the days still to come when it started before the window', () => {
+    const ev = { id: 'h', starts_at: new Date(2026, 9, 19).toISOString(), ends_at: new Date(2026, 9, 24).toISOString(), all_day: true, repeat: 'none' as const };
+    expect(expandEvents([ev], '2026-10-22', '2026-10-31').map((o) => o.day)).toEqual(['2026-10-22', '2026-10-23']);
+  });
+  it('one-day events stay as they were', () => {
+    const ev = { id: 'd', starts_at: new Date(2026, 9, 16, 9).toISOString(), ends_at: new Date(2026, 9, 16, 10).toISOString(), all_day: false, repeat: 'none' as const };
+    const [o] = expandEvents([ev], '2026-10-16', '2026-10-16');
+    expect(o.days).toBeUndefined();
+  });
+  it('no countdown to something already under way', () => {
+    const ev = { id: 'h', starts_at: new Date(2026, 9, 15).toISOString(), ends_at: new Date(2026, 9, 20).toISOString(), all_day: true, repeat: 'none' as const };
+    expect(countdowns([ev], '2026-10-16')).toEqual([]);
+  });
+});
