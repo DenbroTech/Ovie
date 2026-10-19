@@ -23,6 +23,20 @@ interface HouseholdState {
 
 const HouseholdContext = createContext<HouseholdState | null>(null);
 
+// The last household this device loaded, so Ovie can always start and show what it last knew, even with no
+// internet (or a server that can't be reached). Small, so it lives in localStorage on its own.
+const HOME_KEY = 'ovie-home';
+interface HomeCopy { user: string; household: Household; members: Member[]; devices: Device[] }
+function savedHome(userId: string): HomeCopy | null {
+  try {
+    const c = JSON.parse(localStorage.getItem(HOME_KEY) ?? 'null') as HomeCopy | null;
+    return c && c.user === userId && c.household ? c : null;
+  } catch { return null; }
+}
+function saveHome(c: HomeCopy) {
+  try { localStorage.setItem(HOME_KEY, JSON.stringify(c)); } catch { /* full: the read cache still has it */ }
+}
+
 export function HouseholdProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
   const { reportRealtime } = useConnection();
@@ -36,13 +50,21 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   const load = useCallback(async () => {
     if (!userId) return;
     setError(null);
+    // can't reach the server: carry on with what this device last knew, and try again shortly
+    const fallBack = (e: unknown): boolean => {
+      const copy = savedHome(userId);
+      if (!copy) { setError(friendlyError(e)); setStatus('error'); return false; }
+      setHousehold((h) => h ?? copy.household);
+      setMembers((m) => (m.length ? m : copy.members));
+      setDevices((d) => (d.length ? d : copy.devices));
+      setError(friendlyError(e));
+      setStatus('ready');
+      return true;
+    };
     const state = await supabase.rpc('setup_state');
-    if (state.error) {
-      setError(friendlyError(state.error));
-      setStatus('error');
-      return;
-    }
+    if (state.error) { fallBack(state.error); return; }
     if (state.data !== 'paired') {
+      try { localStorage.removeItem(HOME_KEY); } catch { /* ignore */ }
       setHousehold(null);
       setMembers([]);
       setDevices([]);
@@ -55,11 +77,8 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
       supabase.from('devices').select('id,household_id,user_id,member_id,kind,label,last_seen_at').order('created_at'),
     ]);
     const err = h.error ?? m.error ?? d.error;
-    if (err) {
-      setError(friendlyError(err));
-      setStatus('error');
-      return;
-    }
+    if (err) { fallBack(err); return; }
+    saveHome({ user: userId, household: h.data as Household, members: m.data as Member[], devices: d.data as Device[] });
     setHousehold(h.data as Household);
     setMembers(m.data as Member[]);
     setDevices(d.data as Device[]);
@@ -67,9 +86,21 @@ export function HouseholdProvider({ children }: { children: ReactNode }) {
   }, [userId]);
 
   useEffect(() => {
-    setStatus('loading');
+    const copy = userId ? savedHome(userId) : null;
+    if (copy) {
+      setHousehold(copy.household); setMembers(copy.members); setDevices(copy.devices); setStatus('ready');
+    } else setStatus('loading');
     void load();
-  }, [load]);
+  }, [load, userId]);
+
+  // while running on the saved copy, keep trying the server
+  const offlineStart = status === 'ready' && !!error;
+  useEffect(() => {
+    if (!offlineStart) return;
+    const id = window.setInterval(() => void load(), 30_000);
+    window.addEventListener('online', load);
+    return () => { window.clearInterval(id); window.removeEventListener('online', load); };
+  }, [offlineStart, load]);
 
   const hid = household?.id;
   useEffect(() => {

@@ -25,6 +25,8 @@ const ONLINE_ONLY_RPCS = new Set(['pair_device', 'setup_household', 'regenerate_
 let baseFetch: typeof fetch = (...a) => fetch(...a);
 let tokenGetter: () => Promise<string | null> = async () => null;
 let connected = true;
+/** How long to wait for the internet before showing the saved copy instead. */
+const SLOW_MS = 6000;
 
 /** For tests and wiring: the real fetch, and how to get the current sign-in token when replaying the outbox. */
 export function configureOffline(opts: { fetch?: typeof fetch; token?: () => Promise<string | null> }) {
@@ -40,12 +42,75 @@ function setConnected(v: boolean) {
 }
 
 // ---------- storage ----------
+// Saved answers live in IndexedDB (room for hundreds of MB), kept in memory while Ovie runs. localStorage only
+// holds ~5 MB: once full, the oldest answers were dropped, and the household itself (loaded once at start-up)
+// was usually the oldest, so a later offline start had nothing to show. The outbox stays in localStorage (small).
 
-const store = {
+const DB_NAME = 'ovie-cache';
+const DB_STORE = 'kv';
+const KEEP_DAYS = 30;
+const mem = new Map<string, string>();
+let db: IDBDatabase | null = null;
+let readyP: Promise<void> | null = null;
+
+function openDb(): Promise<IDBDatabase | null> {
+  return new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(DB_NAME, 1);
+      req.onupgradeneeded = () => { req.result.createObjectStore(DB_STORE); };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    } catch { resolve(null); }
+  });
+}
+
+/** Load the saved answers into memory (once), moving any old localStorage copies across and dropping stale ones. */
+export function cacheReady(): Promise<void> {
+  if (readyP) return readyP;
+  readyP = (async () => {
+    if (typeof indexedDB === 'undefined') return;
+    const opened = await Promise.race([openDb(), new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
+    if (!opened) return;
+    const all = await new Promise<Array<[string, string]>>((resolve) => {
+      const out: Array<[string, string]> = [];
+      try {
+        const cur = opened.transaction(DB_STORE).objectStore(DB_STORE).openCursor();
+        cur.onsuccess = () => { const c = cur.result; if (c) { out.push([String(c.key), String(c.value)]); c.continue(); } else resolve(out); };
+        cur.onerror = () => resolve(out);
+      } catch { resolve(out); }
+    });
+    db = opened;
+    const cutoff = Date.now() - KEEP_DAYS * 86_400_000;
+    for (const [k, v] of all) {
+      let at = 0; try { at = JSON.parse(v).at ?? 0; } catch { /* keep */ }
+      if (at && at < cutoff) idbDel(k); else mem.set(k, v);
+    }
+    // move answers saved by older versions out of localStorage (frees it for the outbox and sign-in)
+    try {
+      for (const k of Object.keys(localStorage)) {
+        if (!k.startsWith(CACHE_PREFIX)) continue;
+        const v = localStorage.getItem(k);
+        if (v !== null && !mem.has(k)) { mem.set(k, v); idbPut(k, v); }
+        localStorage.removeItem(k);
+      }
+    } catch { /* no localStorage */ }
+  })();
+  return readyP;
+}
+
+function idbPut(key: string, value: string) {
+  try { db?.transaction(DB_STORE, 'readwrite').objectStore(DB_STORE).put(value, key); } catch { /* memory still has it */ }
+}
+function idbDel(key: string) {
+  try { db?.transaction(DB_STORE, 'readwrite').objectStore(DB_STORE).delete(key); } catch { /* ignore */ }
+}
+
+const local = {
   get(key: string): string | null { try { return localStorage.getItem(key); } catch { return null; } },
   set(key: string, value: string) {
     try { localStorage.setItem(key, value); } catch {
-      // full: drop the oldest saved answers and try once more
+      // full: drop the oldest saved answers (never the outbox) and try once more
       try {
         const keys = Object.keys(localStorage).filter((k) => k.startsWith(CACHE_PREFIX));
         keys.sort((a, b) => (JSON.parse(localStorage.getItem(a) ?? '{}').at ?? 0) - (JSON.parse(localStorage.getItem(b) ?? '{}').at ?? 0));
@@ -57,11 +122,18 @@ const store = {
   keys(): string[] { try { return Object.keys(localStorage); } catch { return []; } },
 };
 
+/** Saved answers: IndexedDB-backed memory when available, else localStorage (older browsers, tests). */
+const store = {
+  get(key: string): string | null { return db ? mem.get(key) ?? null : local.get(key); },
+  set(key: string, value: string) { if (db) { mem.set(key, value); idbPut(key, value); } else local.set(key, value); },
+  keys(): string[] { return db ? [...mem.keys()] : local.keys(); },
+};
+
 export function outbox(): Queued[] {
-  try { return JSON.parse(store.get(OUTBOX_KEY) ?? '[]'); } catch { return []; }
+  try { return JSON.parse(local.get(OUTBOX_KEY) ?? '[]'); } catch { return []; }
 }
 const saveOutbox = (q: Queued[]) => {
-  store.set(OUTBOX_KEY, JSON.stringify(q));
+  local.set(OUTBOX_KEY, JSON.stringify(q));
   if (typeof window !== 'undefined') window.dispatchEvent(new Event(STATUS_EVENT));
 };
 
@@ -203,9 +275,12 @@ export async function offlineFetch(input: RequestInfo | URL, init: RequestInit =
   if (kind === 'pass') return baseFetch(input, init);
   const body = typeof init.body === 'string' ? init.body : null;
 
+  await Promise.race([cacheReady(), new Promise((r) => setTimeout(r, 3000))]);
+
   if (kind === 'read') {
     const key = cacheKey(method, urlStr, method === 'POST' ? body : null);
-    try {
+    const savedNow = (): Saved | null => { try { return JSON.parse(store.get(key) ?? 'null'); } catch { return null; } };
+    const live = (async () => {
       const res = await baseFetch(input, init);
       setConnected(true);
       if (res.ok) {
@@ -215,12 +290,24 @@ export async function offlineFetch(input: RequestInfo | URL, init: RequestInit =
         store.set(key, JSON.stringify({ status: res.status, headers: keep, body: text, at: Date.now() } satisfies Saved));
         if (outbox().length) void flushOutbox();
       }
-      return res;
+      // the server itself is having trouble: the last good answer beats an error page
+      const fallback = res.status >= 500 ? savedNow() : null;
+      return fallback ? respond(fallback) : res;
+    })();
+    // A connection that's there but crawling (phone hotspot, weak Wi-Fi): after a few seconds show the saved copy;
+    // the real answer still arrives and is saved, and the screen refreshes from it next time.
+    const saved = savedNow();
+    try {
+      if (!saved) return await live;
+      const slow = new Promise<'slow'>((r) => setTimeout(() => r('slow'), SLOW_MS));
+      const first = await Promise.race([live, slow]);
+      if (first === 'slow') { live.catch(() => setConnected(false)); return respond(saved); }
+      return first;
     } catch (e) {
       if (!isNetworkError(e)) throw e;
       setConnected(false);
-      const saved: Saved | null = JSON.parse(store.get(key) ?? 'null');
-      if (saved) return respond(saved);
+      const again = savedNow();
+      if (again) return respond(again);
       throw e;
     }
   }
