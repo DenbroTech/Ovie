@@ -22,6 +22,8 @@ function savedSession(): Session | null {
   }
 }
 
+const SIGN_IN_WAIT_MS = 6000;
+
 const AuthContext = createContext<AuthState>({ session: null, loading: true, error: null, retry: () => {} });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -32,7 +34,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const ensureSession = useCallback(async () => {
     setLoading(true);
     setError(null);
-    const { data, error: getErr } = await supabase.auth.getSession();
+    // Refreshing an old sign-in needs the internet, and on a weak connection it can hang for ever on "Loading…".
+    // Give it a few seconds; after that carry on with the sign-in saved on this device (it finishes in the background).
+    const timedOut = { data: { session: null }, error: new Error('timed out') };
+    const { data, error: getErr } = await Promise.race([
+      supabase.auth.getSession(),
+      new Promise<typeof timedOut>((r) => setTimeout(() => r(timedOut), SIGN_IN_WAIT_MS)),
+    ]);
     if (data.session) {
       setSession(data.session);
       setLoading(false);
@@ -49,7 +57,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       window.addEventListener('online', again);
       return;
     }
-    const res = await supabase.auth.signInAnonymously();
+    const res = await Promise.race([
+      supabase.auth.signInAnonymously(),
+      new Promise<null>((r) => setTimeout(() => r(null), 20_000)),
+    ]);
+    if (!res) {
+      // still nothing: show the error page, which keeps retrying by itself
+      setError("Couldn't reach Ovie's server. Check the internet connection.");
+      setLoading(false);
+      return;
+    }
     if (res.error) setError(friendlyError(res.error));
     setSession(res.data.session);
     setLoading(false);
