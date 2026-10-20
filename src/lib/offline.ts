@@ -290,8 +290,8 @@ export async function offlineFetch(input: RequestInfo | URL, init: RequestInit =
         store.set(key, JSON.stringify({ status: res.status, headers: keep, body: text, at: Date.now() } satisfies Saved));
         if (outbox().length) void flushOutbox();
       }
-      // the server itself is having trouble: the last good answer beats an error page
-      const fallback = res.status >= 500 ? savedNow() : null;
+      // the server itself is having trouble, or the sign-in is still being renewed: the last good answer beats an error page
+      const fallback = res.status >= 500 || res.status === 401 ? savedNow() : null;
       return fallback ? respond(fallback) : res;
     })();
     // A connection that's there but crawling (phone hotspot, weak Wi-Fi): after a few seconds show the saved copy;
