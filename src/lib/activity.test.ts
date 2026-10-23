@@ -79,3 +79,23 @@ describe('rewards and hearts in what’s new', () => {
     expect(say([row({ kind: 'note', action: 'liked', title: '', info: { note_from: 'm-l', picture: true } })], 'm-a')).toBe('❤️ liked a note with a picture');
   });
 });
+
+describe('genie wishes in what’s new', () => {
+  const names = (id: string | null) => (id === 'm-l' ? 'Lili' : id === 'm-a' ? 'Andrew' : null);
+  const info = { from_member: 'm-a', to_member: 'm-l', due_at: '2026-10-26T08:00:00Z' };
+  it('says who wished what, granted or missed', () => {
+    expect(say([row({ kind: 'wish', title: 'Breakfast in bed', info })], 'm-l', undefined, names))
+      .toBe('made a genie wish 🧞 for you: “Breakfast in bed”');
+    expect(say([row({ kind: 'wish', action: 'done', title: 'Breakfast in bed', info })], 'm-a', undefined, names))
+      .toBe('granted your genie wish “Breakfast in bed” 🧞 (you −3)');
+    expect(say([row({ kind: 'wish', action: 'done', title: 'Breakfast in bed', info })], 'm-l', undefined, names))
+      .toBe('granted Andrew’s genie wish “Breakfast in bed” 🧞 (Andrew −3)');
+    expect(say([row({ kind: 'wish', action: 'missed', title: 'Breakfast in bed', info })], 'm-l', undefined, names))
+      .toBe("you didn't grant Andrew’s wish “Breakfast in bed” in 3 days (−3 😈)");
+  });
+  it('a missed wish comes from the genie and links to the Oviemeter', () => {
+    const [it1] = activityItems([row({ kind: 'wish', action: 'missed', actor_user: null, actor_member: null, actor_device: null, info })], opts);
+    expect(it1.who).toBe('The genie');
+    expect(it1.path).toBe('/oviemeter');
+  });
+});

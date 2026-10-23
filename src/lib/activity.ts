@@ -1,8 +1,8 @@
 /** "What's new": changes anyone in the house made (recorded by the database), worded for people,
  *  grouped when someone does lots of the same thing at once, and linked to where the change is. */
 
-export type ActivityKind = 'task' | 'shopping' | 'note' | 'event' | 'meal' | 'title' | 'viewing' | 'photo' | 'meter';
-export type ActivityAction = 'added' | 'changed' | 'done' | 'undone' | 'deleted' | 'liked';
+export type ActivityKind = 'task' | 'shopping' | 'note' | 'event' | 'meal' | 'title' | 'viewing' | 'photo' | 'meter' | 'wish';
+export type ActivityAction = 'added' | 'changed' | 'done' | 'undone' | 'deleted' | 'liked' | 'missed';
 
 export interface ActivityRow {
   id: number;
@@ -36,7 +36,7 @@ export interface ActivityItem {
 }
 
 export const PATHS: Record<ActivityKind, string> = {
-  task: '/tasks', shopping: '/shopping', note: '/notes', event: '/calendar', meal: '/menu', title: '/watch', viewing: '/watch', photo: '/photos', meter: '/oviemeter',
+  task: '/tasks', shopping: '/shopping', note: '/notes', event: '/calendar', meal: '/menu', title: '/watch', viewing: '/watch', photo: '/photos', meter: '/oviemeter', wish: '/oviemeter',
 };
 
 /** Things that are often done in a burst read better as one line. */
@@ -117,6 +117,16 @@ export function describe(rows: ActivityRow[], meId: string | null, timeZone?: st
         ? `gave ${target} +${pts} on the Oviemeter 😇${why}`
         : `took ${-pts} point${pts === -1 ? '' : 's'} off ${target} on the Oviemeter 😈${why}`;
     }
+    case 'wish': {
+      const from = typeof info.from_member === 'string' ? info.from_member : null;
+      const to = typeof info.to_member === 'string' ? info.to_member : null;
+      const whom = (id: string | null) => (id && id === meId ? 'you' : nameOf(id) ?? 'someone');
+      const whose = (id: string | null) => (id && id === meId ? 'your' : `${nameOf(id) ?? 'someone'}’s`);
+      if (r.action === 'added') return `made a genie wish 🧞 for ${whom(to)}: ${q(r.title)}`;
+      if (r.action === 'done') return `granted ${whose(from)} genie wish ${q(r.title)} 🧞 (${whom(from) === 'you' ? 'you' : nameOf(from) ?? 'they'} −3)`;
+      if (r.action === 'missed') return `${whom(to) === 'you' ? "you didn't" : `${nameOf(to) ?? 'someone'} didn't`} grant ${whose(from)} wish ${q(r.title)} in 3 days (−3 😈)`;
+      return `changed a genie wish ${q(r.title)}`;
+    }
     case 'photo':
       return many ? `added ${rows.length} photos` : 'added a photo';
   }
@@ -144,7 +154,7 @@ export function activityItems(rows: ActivityRow[], opts: {
       : r.info?.task && typeof r.info.to_member === 'string' ? r.info.to_member // a job's reward: the person who earned it
       : typeof r.info?.from_member === 'string' ? r.info.from_member : null;
     const person = opts.memberName(giver ?? r.actor_member);
-    const who = mine ? 'You' : person?.name ?? opts.deviceName(r.actor_device) ?? 'Someone';
+    const who = mine ? 'You' : person?.name ?? opts.deviceName(r.actor_device) ?? (r.kind === 'wish' && r.action === 'missed' ? 'The genie' : 'Someone');
     const day = (r.kind === 'event' || r.kind === 'meal') && typeof r.info?.starts_at === 'string' ? r.info.starts_at : undefined;
     return {
       key: g.map((x) => x.id).join('-'), rows: g, who, colour: mine ? null : person?.colour ?? null,

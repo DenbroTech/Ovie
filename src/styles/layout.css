@@ -726,3 +726,15 @@ section + section > .group-label { margin-top: var(--s-5); }
 
 /* wall screen: colour emoji from the web font (the Pi shows empty squares without it) */
 :root[data-device='wall'] { --font: 'Nunito', ui-rounded, system-ui, 'Noto Color Emoji', sans-serif; }
+
+/* Oviemeter genie */
+.meter-wish { background: #7e57c2; color: #fff; }
+.wish-row { align-items: center; flex-wrap: wrap; }
+.wish-row .row-main { flex: 1 1 200px; min-width: 0; }
+.wish-row .row-title { overflow-wrap: anywhere; }
+.wish-grant { margin-left: auto; }
+.wish-row.is-waiting { border-left: 4px solid #7e57c2; }
+.wish-lamp { flex: none; font-size: 1.6rem; width: 40px; text-align: center; }
+.wish-soon { color: #d32f2f; }
+.wish-grant { flex: none; gap: 4px; white-space: nowrap; }
+.meter-actions .btn { white-space: nowrap; padding-inline: 8px; }
