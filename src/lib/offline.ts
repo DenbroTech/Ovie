@@ -91,12 +91,29 @@ export function cacheReady(): Promise<void> {
       for (const k of Object.keys(localStorage)) {
         if (!k.startsWith(CACHE_PREFIX)) continue;
         const v = localStorage.getItem(k);
-        if (v !== null && !mem.has(k)) { mem.set(k, v); idbPut(k, v); }
+        if (v !== null && savedAt(v) >= savedAt(mem.get(k))) { mem.set(k, v); idbPut(k, v); } // the newer copy wins
         localStorage.removeItem(k);
       }
     } catch { /* no localStorage */ }
   })();
   return readyP;
+}
+
+function savedAt(v: string | undefined | null): number {
+  try { return v ? JSON.parse(v).at ?? 0 : -1; } catch { return 0; }
+}
+
+/** A real answer arrived after the screen had already been given the saved copy: have the screens fetch again
+ *  (straight from the fresh copy), at most every 20 seconds. */
+let freshTimer: ReturnType<typeof setTimeout> | undefined;
+let lastFresh = 0;
+function freshArrived() {
+  if (typeof window === 'undefined' || freshTimer) return;
+  const wait = Math.max(500, lastFresh + 20_000 - Date.now());
+  freshTimer = setTimeout(() => {
+    freshTimer = undefined; lastFresh = Date.now();
+    window.dispatchEvent(new Event(SYNC_EVENT));
+  }, wait);
 }
 
 function idbPut(key: string, value: string) {
@@ -295,13 +312,16 @@ export async function offlineFetch(input: RequestInfo | URL, init: RequestInit =
       return fallback ? respond(fallback) : res;
     })();
     // A connection that's there but crawling (phone hotspot, weak Wi-Fi): after a few seconds show the saved copy;
-    // the real answer still arrives and is saved, and the screen refreshes from it next time.
+    // the real answer still arrives and is saved, and the screens then refresh from it (freshArrived).
     const saved = savedNow();
     try {
       if (!saved) return await live;
       const slow = new Promise<'slow'>((r) => setTimeout(() => r('slow'), SLOW_MS));
       const first = await Promise.race([live, slow]);
-      if (first === 'slow') { live.catch(() => setConnected(false)); return respond(saved); }
+      if (first === 'slow') {
+        live.then((res) => { if (res.ok && savedNow()?.body !== saved.body) freshArrived(); }, () => setConnected(false));
+        return respond(saved);
+      }
       return first;
     } catch (e) {
       if (!isNetworkError(e)) throw e;
