@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarDays, Check, Gauge, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv, Wallet } from 'lucide-react';
+import { CalendarDays, Check, Gauge, Hourglass, MessageSquare, ShoppingCart, SquareCheckBig, Tv } from 'lucide-react';
 import { FitText } from '../../components/FitText';
 import { SHUTDOWN_HELPER_URL } from '../../lib/pi';
 import { eventWhenLabel } from '../../lib/menu';
@@ -12,14 +12,13 @@ import { supabase } from '../../lib/supabase';
 import { useLive } from '../../lib/live';
 import { usePhotos } from '../../lib/photos';
 import { formatClock, formatLongDate } from '../../lib/time';
-import { addDays, countdowns, daysBetween, expandEvents, money, occurrenceWhen, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
+import { addDays, countdowns, daysBetween, expandEvents, occurrenceWhen, nextEpisode, parseIso, todayIso, type EventLike } from '../../lib/dates';
 import { RELEASE_COLS, episodeRelease, nextOutEpisode, upcomingReleases, type ReleaseFields } from '../../lib/releases';
 import { notesForWall, postitColour, postitTilt } from '../../lib/postits';
 import { NoteFace } from '../../components/NoteFace';
 import { isRich } from '../notes/Notes';
 import { parseDoodle } from '../../lib/doodle';
 import { notePicture, useNotePictures } from '../../lib/notePictures';
-import { finishedMonths, type MonthTotal, type TrendMonth } from '../../lib/financeChart';
 import { lookOf, METER_COLS, scoreOf, signed, standing, type MeterPoint } from '../../lib/meter';
 import { MeterGauge, MeterSheep } from '../meter/MeterArt';
 
@@ -71,10 +70,10 @@ interface EventLite extends EventLike { title: string; member_id: string | null;
 interface ItemLite { id: string; name: string; qty: string | null; list_id: string }
 
 /** One big panel shows one topic at a time, readable from across the room. Today always comes first. */
-export type SlideId = 'today' | 'jobs' | 'countdown' | 'week' | 'notes' | 'meter' | 'shopping' | 'money' | 'watch';
+export type SlideId = 'today' | 'jobs' | 'countdown' | 'week' | 'notes' | 'meter' | 'shopping' | 'watch';
 export const SLIDE_SECONDS = 10;
 // The What's new list stays off the screensaver (see private.test.ts); the Oviemeter shows scores only, never reasons.
-const ORDER: SlideId[] = ['today', 'jobs', 'countdown', 'week', 'notes', 'meter', 'shopping', 'money', 'watch'];
+const ORDER: SlideId[] = ['today', 'jobs', 'countdown', 'week', 'notes', 'meter', 'shopping', 'watch'];
 
 /** Which topics to cycle through: today always, the rest only when they have something to show. */
 export function slidesToShow(has: Partial<Record<Exclude<SlideId, 'today'>, boolean>>): SlideId[] {
@@ -92,7 +91,6 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const [now, setNow] = useState(() => new Date());
   const [photoIdx, setPhotoIdx] = useState(0);
   const [slideIdx, setSlideIdx] = useState(0);
-  const [trend, setTrend] = useState<TrendMonth[] | null>(null);
 
   const photos = usePhotos(hid);
   const events = useLive<EventLite[]>('ss-events', hid, ['events'], () =>
@@ -120,12 +118,6 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     const id = window.setInterval(() => setNow(new Date()), 15_000);
     return () => window.clearInterval(id);
   }, []);
-  useEffect(() => {
-    const load = () => void supabase.rpc('casa_trend', { p_months: 6 }).then(({ data, error }) => setTrend(error ? null : (data as TrendMonth[])));
-    load();
-    const id = window.setInterval(load, 10 * 60_000);
-    return () => window.clearInterval(id);
-  }, []);
 
   const pics = (photos.data ?? []).filter((p) => photos.urls[p.path]);
   useEffect(() => {
@@ -141,10 +133,6 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const nextFor = (t: TitleLite) => nextOutEpisode(t, watchedOf(t.id), today);
   const ready = (t: TitleLite) => (t.kind === 'film' ? episodeRelease(t, 0, 0, today).out : !!nextFor(t));
   const wantList = (titles.data ?? []).filter((t) => t.status === 'want');
-  // Rent dwarfs everything else (and never changes), so the wall leaves it out.
-  // Finished months only (this month is rarely up to date); rent left out, it never changes.
-  const months = trend ? finishedMonths(trend, ['RENT'], today) : [];
-  const hasMoney = months.some((m) => m.total > 0);
   const counts = [
     ...countdowns((events.data ?? []).filter((e) => !e.meal_id), today).map((c) => ({ id: c.event.id, title: c.event.title, days: c.days })),
     ...upcomingReleases(titles.data ?? [], watchedOf, today),
@@ -168,7 +156,6 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
     meter: members.length > 1 && meter.data !== null,
     shopping: (items.data ?? []).length > 0,
     countdown: counts.length > 0,
-    money: hasMoney,
     watch: !!pick,
   });
   // After a Done tap, stay on this topic a little longer so you can tick off a few.
@@ -222,7 +209,7 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
   const cornerMood: SheepMood = night && baseMood === 'sleepy' ? 'sleepy' : ({
     today: baseMood, jobs: 'working', countdown: 'excited', week: 'calendar',
     notes: notesMood(notes.data ?? [], null, now), shopping: shoppingMood((items.data ?? []).length),
-    money: 'finances', watch: 'watch', meter: 'happy',
+    watch: 'watch', meter: 'happy',
   } as Record<SlideId, SheepMood>)[slide];
   const lastDayOf = (o: { day: string; dayIndex?: number; days?: number }) => addDays(o.day, (o.days ?? 1) - 1 - (o.dayIndex ?? 0));
   const shortDay = (day: string) => daysBetween(today, day) === 1 ? 'Tomorrow' : parseIso(day).toLocaleDateString(undefined, { weekday: 'short' });
@@ -362,14 +349,6 @@ export function Screensaver({ onWake }: { onWake: () => void }) {
               </div>
             </>
           )}
-          {slide === 'money' && hasMoney && (
-            <>
-              <h3><Wallet size={24} /> House spending <span className="ss-who">· not counting rent</span></h3>
-              <FitText className="ss-fit" max={48} min={22}>
-                <MoneyMonths months={months} />
-              </FitText>
-            </>
-          )}
           {slide === 'watch' && pick && (
             <>
               <h3><Tv size={24} /> Tonight's pick</h3>
@@ -451,36 +430,6 @@ function WallNotes({ notes, round, name, hearts }: {
           )}
         </div>
       ))}
-    </div>
-  );
-}
-
-/** Last finished month big, with how much it went up or down, then the months before as thick bars. */
-function MoneyMonths({ months }: { months: MonthTotal[] }) {
-  const latest = months[months.length - 1];
-  const max = Math.max(...months.map((m) => m.total), 1);
-  const prev = months.length > 1 ? months[months.length - 2] : null;
-  const change = (c: number | null) => (c === null || Math.round(c) === 0 ? null : c > 0 ? `▲ ${money(Math.round(c))}` : `▼ ${money(Math.round(-c))}`);
-  return (
-    <div className="ss-money">
-      <p className="ss-money-head">
-        <span className="ss-money-month">{latest.longLabel}</span> <span className="ss-money-big">{money(Math.round(latest.total))}</span>
-      </p>
-      {prev && latest.change !== null && (
-        <p className={`ss-money-change ${latest.change > 0 ? 'is-up' : 'is-down'}`}>
-          {change(latest.change) ?? 'Same as'} {latest.change > 0 ? 'more than' : latest.change < 0 ? 'less than' : ''} {prev.longLabel}
-        </p>
-      )}
-      <div className="ss-months" role="table" aria-label="House spending per month, not counting rent">
-        {months.map((m, i) => (
-          <div key={m.month} role="row" className={`ss-month${i === months.length - 1 ? ' is-latest' : ''}`}>
-            <span role="rowheader" className="ss-month-name">{m.label}</span>
-            <span role="cell" className="ss-month-track"><i style={{ width: `${Math.max(2, (m.total / max) * 100)}%` }} /></span>
-            <span role="cell" className="ss-month-total">{money(Math.round(m.total))}</span>
-            <span role="cell" className="ss-month-change">{change(m.change) ?? ''}</span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

@@ -452,21 +452,6 @@ section + section > .group-label { margin-top: var(--s-5); }
 .ss-count-num { font-size: 2.2em; font-weight: 900; line-height: 1; color: #f2c46d; font-variant-numeric: tabular-nums; }
 .ss-count-num span { font-size: 0.3em; font-weight: 800; color: #b9ae9f; margin-left: 10px; }
 .ss-count-title { font-size: 0.77em; font-weight: 800; margin-top: 8px; line-height: 1.15; }
-.ss-money { display: grid; gap: 0.12em; }
-.ss-money-head { margin: 0; display: flex; align-items: baseline; gap: 0.3em; flex-wrap: wrap; }
-.ss-money-month { font-size: 0.75em; font-weight: 800; color: #b9ae9f; }
-.ss-money-big { font-size: 1.9em; font-weight: 900; line-height: 1; font-variant-numeric: tabular-nums; }
-.ss-money-change { margin: 0 0 0.25em; font-size: 0.72em; font-weight: 800; color: #efe7da; }
-.ss-money-change.is-up { color: #f0b48f; } .ss-money-change.is-down { color: #9fd3ad; }
-.ss-months { display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 0.22em 0.4em; font-size: 0.58em; }
-.ss-month { display: contents; }
-.ss-month-name { font-weight: 800; color: #b9ae9f; }
-.ss-month-track { height: 0.75em; border-radius: 0 0.2em 0.2em 0; background: #2b2723; }
-.ss-month-track i { display: block; height: 100%; border-radius: 0 0.2em 0.2em 0; background: #2c5fa3; }
-.ss-month.is-latest .ss-month-track i { background: #4f95e6; }
-.ss-month.is-latest .ss-month-name, .ss-month.is-latest .ss-month-total { color: #efe7da; }
-.ss-month-total { font-weight: 800; font-variant-numeric: tabular-nums; text-align: right; }
-.ss-month-change { font-weight: 700; color: #9f9585; font-variant-numeric: tabular-nums; font-size: 0.85em; }
 .ss-pick { display: flex; flex-direction: column; align-items: flex-start; gap: 0.25em; }
 .ss-pick-title { font-size: 1.47em; font-weight: 900; line-height: 1.05; }
 .ss-pill { background: #4a3b57; color: #e3cdf0; border-radius: 999px; padding: 0.1em 0.45em; font-size: 0.8em; font-weight: 900; }
