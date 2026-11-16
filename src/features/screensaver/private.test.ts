@@ -5,4 +5,7 @@ describe('screensaver stays private', () => {
   it('never shows What’s new, or the reasons behind Oviemeter points', () => {
     expect(source).not.toMatch(/from\('activity'\)|ActivityBell|useActivity|\.reason\b/);
   });
+  it('never shows money', () => {
+    expect(source).not.toMatch(/casa_|financeChart|finance|spending|Wallet/i);
+  });
 });

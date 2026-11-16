@@ -67,14 +67,14 @@ describe('notes', () => {
 import { slidesToShow } from './screensaver/Screensaver';
 describe('screensaver slides', () => {
   it('one big panel: today first, and skips empty topics', () => {
-    expect(slidesToShow({ jobs: true, countdown: true, meter: true, shopping: true, money: false, watch: true })).toEqual(['today', 'jobs', 'countdown', 'meter', 'shopping', 'watch']);
+    expect(slidesToShow({ jobs: true, countdown: true, meter: true, shopping: true, watch: true })).toEqual(['today', 'jobs', 'countdown', 'meter', 'shopping', 'watch']);
     expect(slidesToShow({})).toEqual(['today']);
   });
 });
 
 import { finishedMonths } from '../lib/financeChart';
 import { countdowns } from '../lib/dates';
-describe('screensaver: money month by month', () => {
+describe('finances: month by month', () => {
   const trend = [
     { month: '2026-07-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 500 }], paid_in: [] },
     { month: '2026-08-01', spent: [{ group: 'RENT', total: 1420 }, { group: 'GROCERIES', total: 600 }, { group: 'BILLS', total: 200 }], paid_in: [] },
